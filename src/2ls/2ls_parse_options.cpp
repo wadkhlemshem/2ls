@@ -246,6 +246,11 @@ void twols_parse_optionst::get_command_line_options(optionst &options)
   else
     options.set_option("incremental", true);
 
+  if(cmdline.isset("z3"))
+    options.set_option("solver", "z3");
+  else
+    options.set_option("solver", "");
+
   // compute preconditions
   if(cmdline.isset("preconditions"))
     options.set_option("preconditions", true);
