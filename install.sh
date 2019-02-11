@@ -1,7 +1,7 @@
 #!/bin/bash
 
 CBMC_REPO=https://github.com/peterschrammel/cbmc
-CBMC_VERSION=2ls-prerequisites-0.7
+CBMC_VERSION=smt-support
 
 if [ "$1" != "" ]
 then
@@ -15,6 +15,7 @@ git checkout $CBMC_VERSION
 if grep '^Z3' src/config.inc > /dev/null
 then
   make -C src z3-download z3-build
+fi
 if grep '^MINISAT2' src/config.inc > /dev/null
 then
   make -C src minisat2-download > /dev/null
