@@ -12,6 +12,9 @@ git clone $CBMC_REPO
 cd cbmc
 CBMC=`pwd`
 git checkout $CBMC_VERSION
+if grep '^Z3' src/config.inc > /dev/null
+then
+  make -C src z3-download z3-build
 if grep '^MINISAT2' src/config.inc > /dev/null
 then
   make -C src minisat2-download > /dev/null

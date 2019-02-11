@@ -6,5 +6,8 @@ CBMC = ~/my-cbmc
 #static compilation
 #LINKFLAGS += -static-libgcc -static-libstdc++
 
+#OpenMP for Z3
+LINKFLAGS += -fopenmp
+
 #2LS switches
 TWOLS_FLAGS = 
