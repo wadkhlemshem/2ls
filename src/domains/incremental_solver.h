@@ -15,6 +15,7 @@ Author: Peter Schrammel
 #include <solvers/flattening/bv_pointers.h>
 #include <solvers/refinement/bv_refinement.h>
 #include <solvers/sat/satcheck.h>
+#include <solvers/smt2/z3_conv.h>
 
 #include "domain.h"
 #include "util.h"
@@ -35,16 +36,18 @@ class incremental_solvert:public messaget
 
   explicit incremental_solvert(
     const namespacet &_ns,
+    const std::string &_solver_name,
     bool _arith_refinement=false):
     sat_check(NULL),
     solver(NULL),
     ns(_ns),
+    solver_name(_solver_name),
     activation_literal_counter(0),
     domain_number(0),
     arith_refinement(_arith_refinement),
     solver_calls(0)
   {
-    allocate_solvers(_arith_refinement);
+    allocate_solvers(_solver_name, _arith_refinement);
     contexts.push_back(constraintst());
   }
 
@@ -68,7 +71,7 @@ class incremental_solvert:public messaget
 
 #ifdef NON_INCREMENTAL
     deallocate_solvers();
-    allocate_solvers(arith_refinement);
+    allocate_solvers(solver_name,arith_refinement);
     unsigned context_no=0;
     for(const auto &context : contexts)
     {
@@ -108,9 +111,10 @@ class incremental_solvert:public messaget
 
   static incremental_solvert *allocate(
     const namespacet &_ns,
+    const std::string &_solver_name,
     bool arith_refinement=false)
   {
-    return new incremental_solvert(_ns, arith_refinement);
+    return new incremental_solvert(_ns, _solver_name, arith_refinement);
   }
 
   inline prop_convt & get_solver() { return *solver; }
@@ -118,6 +122,7 @@ class incremental_solvert:public messaget
   propt *sat_check;
   prop_convt *solver;
   const namespacet &ns;
+  const std::string solver_name;
 
   void new_context();
   void pop_context();
@@ -141,21 +146,28 @@ class incremental_solvert:public messaget
   // statistics
   unsigned solver_calls;
 
-  void allocate_solvers(bool arith_refinement)
+  void allocate_solvers(std::string solver_name, bool arith_refinement)
   {
-    sat_check=new satcheckt();
+    if (solver_name=="z3")
+    {
+      solver=new z3_convt(ns,"","","");
+    }
+    else
+    {
+      sat_check=new satcheckt();
 #if 0
-    sat_check=new satcheck_minisat_no_simplifiert();
+      sat_check=new satcheck_minisat_no_simplifiert();
 #endif
 #ifdef NON_INCREMENTAL
-    solver=new bv_pointerst(ns, *sat_check);
+      solver=new bv_pointerst(ns, *sat_check);
 #else
-    solver=new bv_refinementt(ns, *sat_check);
-    solver->set_all_frozen();
-    static_cast<bv_refinementt *>(solver)->do_array_refinement=false;
-    static_cast<bv_refinementt *>(solver)->do_arithmetic_refinement=
-      arith_refinement;
+      solver=new bv_refinementt(ns, *sat_check);
+      solver->set_all_frozen();
+      static_cast<bv_refinementt *>(solver)->do_array_refinement=false;
+      static_cast<bv_refinementt *>(solver)->do_arithmetic_refinement=
+        arith_refinement;
 #endif
+    }
   }
 
   void deallocate_solvers()
@@ -192,25 +204,32 @@ static inline incremental_solvert &operator<<(
               << from_expr(dest.ns, "", src) << std::endl;
 #endif
 
-#ifdef NON_INCREMENTAL
-  dest.contexts.back().push_back(src);
-#else
-#ifndef DEBUG_FORMULA
-  if(!dest.activation_literals.empty())
-    *dest.solver <<
-      or_exprt(src, literal_exprt(!dest.activation_literals.back()));
-  else
-    *dest.solver << src;
-#else
-  if(!dest.activation_literals.empty())
+  if(dest.solver_name=="z3")
   {
-    literal_exprt act_lit(!dest.activation_literals.back());
-    dest.debug_add_to_formula(or_exprt(src, act_lit));
+    *dest.solver << src;
   }
   else
-    dest.debug_add_to_formula(src);
+  {
+#ifdef NON_INCREMENTAL
+    dest.contexts.back().push_back(src);
+#else
+#ifndef DEBUG_FORMULA
+    if(!dest.activation_literals.empty())
+      *dest.solver <<
+        or_exprt(src, literal_exprt(!dest.activation_literals.back()));
+    else
+      *dest.solver << src;
+#else
+    if(!dest.activation_literals.empty())
+    {
+      literal_exprt act_lit(!dest.activation_literals.back());
+      dest.debug_add_to_formula(or_exprt(src, act_lit));
+    }
+    else
+      dest.debug_add_to_formula(src);
 #endif
 #endif
+  }
   return dest;
 }
 

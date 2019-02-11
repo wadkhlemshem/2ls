@@ -88,6 +88,7 @@ void ssa_analyzert::operator()(
     {
       strategy_solver=new ranking_solver_enumerationt(
         *static_cast<linrank_domaint *>(domain), solver, SSA.ns,
+        template_generator.options.get_option("solver"),
         template_generator.options.get_unsigned_int_option(
           "max-inner-ranking-iterations"));
       result=new linrank_domaint::templ_valuet();
@@ -96,6 +97,7 @@ void ssa_analyzert::operator()(
     {
       strategy_solver=new lexlinrank_solver_enumerationt(
         *static_cast<lexlinrank_domaint *>(domain), solver, SSA.ns,
+        template_generator.options.get_option("solver"),
         template_generator.options.get_unsigned_int_option(
           "lexicographic-ranking-function"),
         template_generator.options.get_unsigned_int_option(

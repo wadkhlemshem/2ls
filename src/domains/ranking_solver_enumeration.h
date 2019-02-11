@@ -23,11 +23,12 @@ public:
     linrank_domaint &_linrank_domain,
     incremental_solvert &_solver,
     const namespacet &_ns,
+    const std::string &_solver_name,
     unsigned _max_inner_iterations):
     strategy_solver_baset(_solver, _ns),
     linrank_domain(_linrank_domain),
     max_inner_iterations(_max_inner_iterations),
-    inner_solver(_ns),
+    inner_solver(_ns,_solver_name),
     number_inner_iterations(0)
   {
     solver_instances++;

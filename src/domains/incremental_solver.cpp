@@ -31,32 +31,39 @@ Function: incremental_solvert::new_context
 
 void incremental_solvert::new_context()
 {
+  if(solver_name=="z3")
+  {
+    static_cast<z3_convt *>(solver)->new_context();
+  }
+  else
+  {
 #ifdef NON_INCREMENTAL
-  contexts.push_back(constraintst());
+    contexts.push_back(constraintst());
 
 #if 0
-  std::cerr << "new context: " << contexts.size() << std::endl;
+    std::cerr << "new context: " << contexts.size() << std::endl;
 #endif
 
 #else
 
-  literalt activation_literal=
-    solver->convert(
-      symbol_exprt(
-        "goto_symex::\\act$"+
-        i2string(activation_literal_counter++), bool_typet()));
+    literalt activation_literal=
+      solver->convert(
+        symbol_exprt(
+          "goto_symex::\\act$"+
+          i2string(activation_literal_counter++), bool_typet()));
 
 #ifdef DEBUG_OUTPUT
-    debug() << "new context: " << activation_literal<< eom;
+      debug() << "new context: " << activation_literal<< eom;
 #endif
 
-  activation_literals.push_back(activation_literal);
-  solver->set_assumptions(activation_literals);
+    activation_literals.push_back(activation_literal);
+    solver->set_assumptions(activation_literals);
 
 #if 0
-  return !activation_literals.back(); // not to be used anymore
+    return !activation_literals.back(); // not to be used anymore
 #endif
 #endif
+  }
 }
 
 /*******************************************************************\
@@ -73,32 +80,39 @@ Function: incremental_solvert::pop_context
 
 void incremental_solvert::pop_context()
 {
+  if (solver_name=="z3")
+  {
+    static_cast<z3_convt *>(solver)->pop_context();
+  }
+  else
+  {
 #ifdef NON_INCREMENTAL
-  assert(!contexts.empty());
+    assert(!contexts.empty());
 
 #if 0
-  std::cerr << "pop context: " << contexts.size() << std::endl;
+    std::cerr << "pop context: " << contexts.size() << std::endl;
 #endif
 
-  contexts.pop_back();
+    contexts.pop_back();
 
 #else
 
-  assert(!activation_literals.empty());
-  literalt activation_literal=activation_literals.back();
-  activation_literals.pop_back();
+    assert(!activation_literals.empty());
+    literalt activation_literal=activation_literals.back();
+    activation_literals.pop_back();
 #ifndef DEBUG_FORMULA
-  solver->set_to_false(literal_exprt(activation_literal));
+    solver->set_to_false(literal_exprt(activation_literal));
 #else
-  formula.push_back(!activation_literal);
+    formula.push_back(!activation_literal);
 #endif
 
 #ifdef DEBUG_OUTPUT
-    debug() << "pop context: " << activation_literal << eom;
+      debug() << "pop context: " << activation_literal << eom;
 #endif
 
-  solver->set_assumptions(activation_literals);
+    solver->set_assumptions(activation_literals);
 #endif
+  }
 }
 
 /*******************************************************************\

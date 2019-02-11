@@ -245,7 +245,7 @@ bool lexlinrank_solver_enumerationt::iterate(invariantt &_rank)
               // reset the inner solver
               debug() << "Reset the inner solver " << eom;
               delete inner_solver;
-              inner_solver=incremental_solvert::allocate(ns);
+              inner_solver=incremental_solvert::allocate(ns,solver_name);
               solver_instances++;
               lexlinrank_domain.reset_refinements();
 

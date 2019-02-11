@@ -49,6 +49,7 @@ public:
     the_solvers[function_name]=
       incremental_solvert::allocate(
         store.at(function_name)->ns,
+        options.get_option("solver"),
         options.get_bool_option("refine"));
     return *the_solvers.at(function_name);
   }
