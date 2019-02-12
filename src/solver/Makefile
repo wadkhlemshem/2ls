@@ -10,7 +10,7 @@ CBMC ?= ../..
 
 CP_CXXFLAGS += $(TWOLSFLAGS)
 
-INCLUDES= -I $(CBMC)/src -I ..
+INCLUDES= -I $(CBMC)/src -I $(CBMC)/z3/src/api -I ..
 
 CLEANFILES = solver$(LIBEXT)
 
