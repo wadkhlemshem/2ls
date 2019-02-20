@@ -40,6 +40,8 @@ public:
   }
 
   virtual void initialize(valuet &value);
+  
+  virtual void join(valuet &value1, const valuet &value2);
 
 protected:
   templatet templ;
