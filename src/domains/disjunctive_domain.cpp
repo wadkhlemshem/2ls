@@ -22,3 +22,30 @@ Author: Johanan Wahlang
 #define SYMB_BOUND_VAR "symb_bound#"
 
 #define ENABLE_HEURISTICS
+
+/*******************************************************************\
+
+Function: disjunctive_domaint::initialize
+
+  Inputs:
+
+ Outputs:
+
+ Purpose:
+
+\*******************************************************************/
+
+void disjunctive_domaint::initialize(valuet &value)
+{
+#if 0
+  if(templ.size()==0)
+    return domaint::initialize(value);
+#endif
+
+  templ_valuet &v=static_cast<templ_valuet&>(value);
+  v.resize(templ.size());
+  for (std::size_t disjunct=0; disjunct<v.size(); disjunct++)
+  {
+    templ[disjunct].initialize(v[disjunct]);
+  }
+}

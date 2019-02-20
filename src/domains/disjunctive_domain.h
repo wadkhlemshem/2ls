@@ -39,6 +39,8 @@ public:
   {
   }
 
+  virtual void initialize(valuet &value);
+
 protected:
   templatet templ;
 };
