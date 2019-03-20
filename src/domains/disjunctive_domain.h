@@ -43,6 +43,16 @@ public:
   
   virtual void join(valuet &value1, const valuet &value2);
 
+  // printing
+  virtual void output_value(
+    std::ostream &out,
+    const valuet &value,
+    const namespacet &ns) const override;
+
+  virtual void output_domain(
+    std::ostream &out,
+    const namespacet &ns) const override;
+
 protected:
   templatet templ;
 };

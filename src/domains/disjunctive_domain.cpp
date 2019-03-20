@@ -79,3 +79,50 @@ void disjunctive_domaint::join(valuet &value1, const valuet &value2)
 
   //TODO: merge heuristic for interval polyhedral domain
 }
+
+/*******************************************************************\
+
+Function: disjunctive_domaint::output_value
+
+  Inputs:
+
+ Outputs:
+
+ Purpose:
+
+\*******************************************************************/
+
+void disjunctive_domaint::output_value(
+  std::ostream &out,
+  const domaint::valuet &value,
+  const namespacet &ns) const
+{
+  const templ_valuet &v = static_cast<const templ_valuet &>(value);
+
+  for (std::size_t d=0; d<v.size(); ++d)
+  {
+    templ[d].output_value(out,v[d],ns);
+  }
+}
+
+/*******************************************************************\
+
+Function: disjunctive_domaint::output_domain
+
+  Inputs:
+
+ Outputs:
+
+ Purpose:
+
+\*******************************************************************/
+
+void disjunctive_domaint::output_domain(
+  std::ostream &out,
+  const namespacet &ns) const
+{
+  for (std::size_t d=0; d<templ.size(); ++d)
+  {
+    templ[d].output_domain(out,ns);
+  }
+}
