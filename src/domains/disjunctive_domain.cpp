@@ -126,3 +126,31 @@ void disjunctive_domaint::output_domain(
     templ[d].output_domain(out,ns);
   }
 }
+
+/*******************************************************************\
+
+Function: disjunctive_domaint::project_on_vars
+
+  Inputs:
+
+ Outputs:
+
+ Purpose:
+
+\*******************************************************************/
+
+void disjunctive_domaint::project_on_vars(
+  domaint::valuet &value,
+  const domaint::var_sett &vars,
+  exprt &result)
+{
+  templ_valuet &v=static_cast<templ_valuet &>(value);
+
+  result = false_exprt();
+  exprt disjunct_result;
+  for (std::size_t d=0; d<v.size(); ++d)
+  {
+    templ[d].project_on_vars(v[d], vars, disjunct_result);
+    result = or_exprt(result, disjunct_result);
+  }
+}

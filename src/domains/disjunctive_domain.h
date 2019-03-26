@@ -53,6 +53,11 @@ public:
     std::ostream &out,
     const namespacet &ns) const override;
 
+  virtual void project_on_vars(
+    valuet &value,
+    const var_sett &vars,
+    exprt &result) override;
+
 protected:
   templatet templ;
 };
