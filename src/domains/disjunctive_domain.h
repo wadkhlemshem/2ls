@@ -38,6 +38,8 @@ public:
   {
   };
 
+  typedef std::pair<unsigned, ieee_floatt> lex_metrict;
+
   disjunctive_domaint(
     unsigned int _domain_number,
     replace_mapt &_renaming_map,
@@ -46,12 +48,14 @@ public:
     const template_kindt _template_kind,
     const disjunctt _max,
     const guardst _guards,
+    const lex_metrict _tol,
     local_SSAt::locationt _location):
     domaint(_domain_number, _renaming_map, _ns),
     template_kind(_template_kind),
     max(_max),
     templ(),
     guards(_guards),
+    tol(_tol),
     location(_location)
   {
     if(template_kind==TPOLYHEDRA)
@@ -100,6 +104,7 @@ protected:
   disjunctt max;
   templatet templ;
   guardst guards;
+  lex_metrict tol;
   local_SSAt::locationt location;
 };
 
