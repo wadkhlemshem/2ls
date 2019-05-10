@@ -19,11 +19,16 @@ Author: Johanan Wahlang
 #include <util/namespace.h>
 
 #include "domain.h"
+#include "tpolyhedra_domain.h"
 #include "symbolic_path.h"
 
 class disjunctive_domaint:public domaint
 {
 public:
+  enum template_kindt
+  {
+    TPOLYHEDRA, HEAP
+  };
   typedef unsigned disjunctt;
   typedef std::map<disjunctt, std::map<unsigned int,domaint>> templatet;
 
@@ -36,11 +41,17 @@ public:
     replace_mapt &_renaming_map,
     const var_specst &var_specs,
     const namespacet &_ns,
+    const template_kindt _template_kind,
     const disjunctt _max):
     domaint(_domain_number, _renaming_map, _ns),
+    template_kind(_template_kind),
     max(_max),
     templ()
   {
+    if(template_kind==TPOLYHEDRA)
+    {
+      base_domain_ptr=new tpolyhedra_domaint(domain_number, renaming_map, ns);
+    }
   }
 
   virtual ~disjunctive_domaint()
@@ -68,6 +79,10 @@ public:
     const var_sett &vars,
     exprt &result) override;
 
+  template_kindt &get_template_kind()
+  {
+    return template_kind;
+  }
   domaint *base_domain()
   {
     return base_domain_ptr;
@@ -75,6 +90,7 @@ public:
 
 protected:
   domaint *base_domain_ptr;
+  template_kindt template_kind;
   disjunctt max;
   templatet templ;
 };
