@@ -40,6 +40,39 @@ public:
 
   typedef std::pair<unsigned, ieee_floatt> lex_metrict;
 
+  struct unresolved_edget
+  {
+    disjunctt disjunct;
+    symbolic_patht path;
+
+    unresolved_edget(
+      disjunctt _disjunct,
+      symbolic_patht _path):
+      disjunct(_disjunct),
+      path(_path)
+    {}
+  };
+  
+  typedef std::set<unresolved_edget> unresolved_sett;
+
+  struct seen_edget
+  {
+    disjunctt source;
+    symbolic_patht path;
+    disjunctt sink;
+
+    seen_edget(
+      disjunctt _source,
+      symbolic_patht _path,
+      disjunctt _sink):
+      source(_source),
+      path(_path),
+      sink(_sink)
+    {}
+  };
+  
+  typedef std::set<seen_edget> seen_sett;
+
   disjunctive_domaint(
     unsigned int _domain_number,
     replace_mapt &_renaming_map,
@@ -56,7 +89,9 @@ public:
     templ(),
     guards(_guards),
     tol(_tol),
-    location(_location)
+    location(_location),
+    unresolved_set(),
+    seen_set()
   {
     if(template_kind==TPOLYHEDRA)
     {
@@ -112,6 +147,8 @@ protected:
   guardst guards;
   lex_metrict tol;
   local_SSAt::locationt location;
+  unresolved_sett unresolved_set;
+  seen_sett seen_set;
 };
 
 #endif // CPROVER_2LS_DOMAINS_DISJUNCTIVE_DOMAIN_H
