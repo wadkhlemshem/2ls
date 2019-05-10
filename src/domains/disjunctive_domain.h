@@ -193,6 +193,8 @@ protected:
   local_SSAt::locationt location;
   unresolved_sett unresolved_set;
   seen_sett seen_set;
+
+  friend class strategy_solver_disjunctivet;
 };
 
 #endif // CPROVER_2LS_DOMAINS_DISJUNCTIVE_DOMAIN_H
