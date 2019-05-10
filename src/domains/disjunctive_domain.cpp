@@ -42,11 +42,14 @@ void disjunctive_domaint::initialize(valuet &value)
     return domaint::initialize(value);
 #endif
 
-  templ_valuet &v=static_cast<templ_valuet&>(value);
+  disjunctive_valuet &v=static_cast<disjunctive_valuet &>(value);
   v.resize(templ.size());
-  for (std::size_t disjunct=0; disjunct<v.size(); disjunct++)
+  for (auto &d : templ)
   {
-    templ[disjunct].initialize(v[disjunct]);
+    for (auto &t : d.second)
+    {
+      t.second.initialize(v[d.first]);
+    }
   }
 }
 
@@ -69,8 +72,8 @@ void disjunctive_domaint::join(valuet &value1, const valuet &value2)
     return domaint::join(value1, value2);
 #endif
 
-  templ_valuet &v1=static_cast<templ_valuet&>(value1);
-  const templ_valuet &v2=static_cast<const templ_valuet&>(value2);
+  disjunctive_valuet &v1=static_cast<disjunctive_valuet&>(value1);
+  const disjunctive_valuet &v2=static_cast<const disjunctive_valuet&>(value2);
   v1.resize(v1.size() + v2.size());
   for(std::size_t disjunct=v1.size(); disjunct<v1.size()+v2.size(); ++disjunct)
   {
@@ -97,11 +100,15 @@ void disjunctive_domaint::output_value(
   const domaint::valuet &value,
   const namespacet &ns) const
 {
-  const templ_valuet &v = static_cast<const templ_valuet &>(value);
+  const disjunctive_valuet &v = static_cast<const disjunctive_valuet &>(value);
 
-  for (std::size_t d=0; d<v.size(); ++d)
+  for (auto &d : templ)
   {
-    templ[d].output_value(out,v[d],ns);
+    auto t=d.second;
+    for (auto &i : t)
+    {
+      i.second.output_value(out,v[d.first],ns);
+    }
   }
 }
 
@@ -121,9 +128,12 @@ void disjunctive_domaint::output_domain(
   std::ostream &out,
   const namespacet &ns) const
 {
-  for (std::size_t d=0; d<templ.size(); ++d)
+  for (auto &d : templ)
   {
-    templ[d].output_domain(out,ns);
+    for (auto &i : d.second)
+    {
+      i.second.output_domain(out,ns);
+    }
   }
 }
 
@@ -144,13 +154,13 @@ void disjunctive_domaint::project_on_vars(
   const domaint::var_sett &vars,
   exprt &result)
 {
-  templ_valuet &v=static_cast<templ_valuet &>(value);
+  disjunctive_valuet &v=static_cast<disjunctive_valuet &>(value);
 
   result = false_exprt();
   exprt disjunct_result;
-  for (std::size_t d=0; d<v.size(); ++d)
+  for (auto &d : templ)
   {
-    templ[d].project_on_vars(v[d], vars, disjunct_result);
+    d.second.begin()->second.project_on_vars(v[d.first], vars, disjunct_result);
     result = or_exprt(result, disjunct_result);
   }
 }

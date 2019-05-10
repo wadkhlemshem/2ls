@@ -25,9 +25,9 @@ class disjunctive_domaint:public domaint
 {
 public:
   typedef unsigned disjunctt;
-  typedef std::vector<domaint> templatet;
+  typedef std::map<disjunctt, std::map<unsigned int,domaint>> templatet;
 
-  class templ_valuet:public valuet, public std::vector<valuet>
+  class disjunctive_valuet:public valuet, public std::vector<valuet>
   {
   };
 
@@ -38,8 +38,8 @@ public:
     const namespacet &_ns,
     const disjunctt _max):
     domaint(_domain_number, _renaming_map, _ns),
-    templ(),
-    max(_max)
+    max(_max),
+    templ()
   {
   }
 
