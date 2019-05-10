@@ -35,9 +35,11 @@ public:
     unsigned int _domain_number,
     replace_mapt &_renaming_map,
     const var_specst &var_specs,
-    const namespacet &_ns):
+    const namespacet &_ns,
+    const disjunctt _max):
     domaint(_domain_number, _renaming_map, _ns),
-    templ()
+    templ(),
+    max(_max)
   {
   }
 
@@ -73,6 +75,7 @@ public:
 
 protected:
   domaint *base_domain_ptr;
+  disjunctt max;
   templatet templ;
 };
 
