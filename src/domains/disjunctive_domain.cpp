@@ -164,3 +164,181 @@ void disjunctive_domaint::project_on_vars(
     result = or_exprt(result, disjunct_result);
   }
 }
+
+/*******************************************************************\
+
+Function: disjunctive_domaint::merge_heuristic
+
+  Inputs:
+
+ Outputs:
+
+ Purpose:
+
+\*******************************************************************/
+
+int disjunctive_domaint::merge_heuristic(disjunctive_valuet &dv, valuet &value)
+{
+  if (template_kind==TPOLYHEDRA)
+  {
+    tpolyhedra_domaint::templ_valuet &v_new=static_cast<tpolyhedra_domaint::templ_valuet &>(value);
+    ieee_floatt inf;
+    inf.make_plus_infinity();
+    lex_metrict min_distance(dv.size(),inf);
+    disjunctt min_disjunct=0;
+    for (disjunctt d=0; d<dv.size(); d++)
+    {
+      tpolyhedra_domaint::templ_valuet &v=static_cast<tpolyhedra_domaint::templ_valuet &>(dv[d]);
+      lex_metrict distance=hausdorff_distance(v, v_new);
+      if (distance<min_distance)
+      {
+        min_distance=distance;
+        min_disjunct=d;
+      }
+    }
+    if (dv.size()<max &&
+        min_distance>tol)
+    {
+      return -1;
+    }
+    return min_disjunct;
+  }
+  else
+  {
+    //TODO: merge heuristic for other templates
+  }  
+}
+
+/*******************************************************************\
+
+Function: disjunctive_domaint::hausdorff_distance
+
+  Inputs:
+
+ Outputs:
+
+ Purpose:
+
+\*******************************************************************/
+
+disjunctive_domaint::lex_metrict disjunctive_domaint::hausdorff_distance(
+  const tpolyhedra_domaint::templ_valuet &value1,
+  const tpolyhedra_domaint::templ_valuet &value2)
+{
+  assert(value1.size()==value2.size());
+  ieee_floatt zero;
+  unsigned int incomparable=0;
+  ieee_floatt dist=zero;
+  for (int i=0; i<value1.size(); i+=2)
+  {
+    tpolyhedra_domaint::row_valuet u1=value1[i];
+    tpolyhedra_domaint::row_valuet l1=value1[i+1];
+    tpolyhedra_domaint::row_valuet u2=value2[i];
+    tpolyhedra_domaint::row_valuet l2=value2[i+1];
+
+    if (l1.is_boolean() ||
+        u1.is_boolean() ||
+        l2.is_boolean() ||
+        u2.is_boolean())
+    {
+      if (l1.is_false() ||
+          u1.is_false() ||
+          l2.is_false() ||
+          u2.is_false())
+      {
+        continue;
+      }
+      else if (l1.is_true() &&
+               l2.is_true() &&
+               u1.is_true() &&
+               u2.is_true())
+      {
+        incomparable++;
+      }
+      else if (l1.is_true() && u1.is_true()) // (-oo,oo) [,]
+      {
+        incomparable++;
+      }
+      else if (l2.is_true() && u2.is_true()) // [,] (-oo,oo)
+      {
+        incomparable++;
+      }
+      else if (l1.is_true() && !(l2.is_boolean()))
+      {
+        incomparable++;
+      }
+      else if (l2.is_true() && !(l1.is_boolean()))
+      {
+        incomparable++;
+      }
+      else if (u1.is_true() && !(u1.is_boolean()))
+      {
+        incomparable++;
+      }
+      else if (u2.is_true() && !(u1.is_boolean()))
+      {
+        incomparable++;
+      }
+      else if (l1.is_true() && l2.is_true())
+      {
+        dist+=distance(u1,u2);
+      }
+      else if (u1.is_true() && u2.is_true())
+      {
+        dist+=distance(l1,l2);
+      }
+    }  
+    else
+    {
+      ieee_floatt d1=distance(l1,l2);
+      ieee_floatt d2=distance(u1,u2);
+      if (d1>d2)
+      {
+        dist+=d1;
+      }
+      else
+      {
+        dist+=d2;
+      }      
+    }
+  }
+  return lex_metrict(incomparable,dist);
+}
+
+/*******************************************************************\
+
+Function: disjunctive_domaint::distance
+
+  Inputs:
+
+ Outputs:
+
+ Purpose:
+
+\*******************************************************************/
+
+ieee_floatt disjunctive_domaint::distance(const constant_exprt &v1, const constant_exprt &v2)
+{
+  ieee_floatt diff;
+  if(v1.type()==v2.type() &&
+     (v1.type().id()==ID_signedbv || v1.type().id()==ID_unsignedbv))
+  {
+    mp_integer vv1, vv2;
+    to_integer(v1, vv1);
+    to_integer(v2, vv2);
+    diff.from_integer(vv1-vv2);
+  }
+  else if(v1.type().id()==ID_floatbv && v2.type().id()==ID_floatbv)
+  {
+    ieee_floatt vv1(to_constant_expr(v1));
+    ieee_floatt vv2(to_constant_expr(v2));
+    diff=ieee_floatt(vv1);
+    diff-=vv2;
+  }
+  else
+  {
+    assert(false); // types do not match or are not supported
+  }
+  diff.set_sign(false);
+  return diff;
+}
