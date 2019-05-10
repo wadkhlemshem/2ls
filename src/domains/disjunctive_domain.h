@@ -37,8 +37,52 @@ public:
   class disjunctive_valuet:public valuet, public std::vector<valuet>
   {
   };
+  
+  class lex_metrict
+  {
+  public:
+    unsigned int incomparable;
+    ieee_floatt distance;
 
-  typedef std::pair<unsigned, ieee_floatt> lex_metrict;
+    lex_metrict(
+      unsigned int _incomparable,
+      ieee_floatt _distance):
+      incomparable(_incomparable),
+      distance(_distance)
+      {}
+    friend bool operator< (const lex_metrict &m1, const lex_metrict &m2)
+    {
+      if (m1.incomparable<m2.incomparable)
+      {
+        return true;
+      }
+      else if (m2.incomparable<m1.incomparable)
+      {
+        return false;
+      }
+      else
+      {
+        return (m1.distance < m2.distance);
+      }
+    }
+    friend bool operator> (const lex_metrict &m1, const lex_metrict &m2)
+    {
+      if(m1.incomparable>m2.incomparable)
+      {
+        return true;
+      }
+      else if (m2.incomparable>m1.incomparable)
+      {
+        return false;
+      }
+      else
+      {
+        return (m1.distance>m2.distance);
+      }
+      
+    }
+  };
+  
 
   struct unresolved_edget
   {

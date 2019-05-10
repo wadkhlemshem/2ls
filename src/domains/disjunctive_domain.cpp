@@ -229,7 +229,7 @@ disjunctive_domaint::lex_metrict disjunctive_domaint::hausdorff_distance(
   ieee_floatt zero;
   unsigned int incomparable=0;
   ieee_floatt dist=zero;
-  for (int i=0; i<value1.size(); i+=2)
+  for (std::size_t i=0; i<value1.size(); i+=2)
   {
     tpolyhedra_domaint::row_valuet u1=value1[i];
     tpolyhedra_domaint::row_valuet l1=value1[i+1];
