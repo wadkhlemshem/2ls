@@ -32,11 +32,19 @@ public:
   };
 
   disjunctive_domaint(
-    unsigned _domain_number,
+    unsigned int _domain_number,
     replace_mapt &_renaming_map,
+    const var_specst &var_specs,
     const namespacet &_ns):
-    domaint(_domain_number, _renaming_map, _ns)
+    domaint(_domain_number, _renaming_map, _ns),
+    templ()
   {
+  }
+
+  virtual ~disjunctive_domaint()
+  {
+    if (base_domain_ptr!=NULL)
+      delete base_domain_ptr;
   }
 
   virtual void initialize(valuet &value);
@@ -58,7 +66,13 @@ public:
     const var_sett &vars,
     exprt &result) override;
 
+  domaint *base_domain()
+  {
+    return base_domain_ptr;
+  }
+
 protected:
+  domaint *base_domain_ptr;
   templatet templ;
 };
 
