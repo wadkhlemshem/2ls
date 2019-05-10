@@ -17,6 +17,7 @@ Author: Johanan Wahlang
 #include <langapi/language_util.h>
 #include <util/replace_expr.h>
 #include <util/namespace.h>
+#include <ssa/local_ssa.h>
 
 #include "domain.h"
 #include "tpolyhedra_domain.h"
@@ -31,6 +32,7 @@ public:
   };
   typedef unsigned disjunctt;
   typedef std::map<disjunctt, std::map<unsigned int,domaint>> templatet;
+  typedef std::vector<guardt> guardst;
 
   class disjunctive_valuet:public valuet, public std::vector<valuet>
   {
@@ -42,15 +44,19 @@ public:
     const var_specst &var_specs,
     const namespacet &_ns,
     const template_kindt _template_kind,
-    const disjunctt _max):
+    const disjunctt _max,
+    const guardst _guards,
+    local_SSAt::locationt _location):
     domaint(_domain_number, _renaming_map, _ns),
     template_kind(_template_kind),
     max(_max),
-    templ()
+    templ(),
+    guards(_guards),
+    location(_location)
   {
     if(template_kind==TPOLYHEDRA)
     {
-      base_domain_ptr=new tpolyhedra_domaint(domain_number, renaming_map, ns);
+      base_domain_ptr=new tpolyhedra_domaint(domain_number, renaming_map, _ns);
     }
   }
 
@@ -93,6 +99,8 @@ protected:
   template_kindt template_kind;
   disjunctt max;
   templatet templ;
+  guardst guards;
+  local_SSAt::locationt location;
 };
 
 #endif // CPROVER_2LS_DOMAINS_DISJUNCTIVE_DOMAIN_H
