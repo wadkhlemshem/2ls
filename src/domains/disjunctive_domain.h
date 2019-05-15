@@ -180,7 +180,7 @@ public:
     return base_domain_ptr;
   }
 
-  int merge_heuristic(disjunctive_valuet &dv,valuet &v);
+  disjunctt merge_heuristic(disjunctive_valuet &dv,valuet &v);
   lex_metrict hausdorff_distance(
     const tpolyhedra_domaint::templ_valuet &value1,
     const tpolyhedra_domaint::templ_valuet &value2);

@@ -177,7 +177,7 @@ Function: disjunctive_domaint::merge_heuristic
 
 \*******************************************************************/
 
-int disjunctive_domaint::merge_heuristic(disjunctive_valuet &dv, valuet &value)
+disjunctive_domaint::disjunctt disjunctive_domaint::merge_heuristic(disjunctive_valuet &dv, valuet &value)
 {
   if (template_kind==TPOLYHEDRA)
   {
@@ -199,13 +199,18 @@ int disjunctive_domaint::merge_heuristic(disjunctive_valuet &dv, valuet &value)
     if (dv.size()<max &&
         min_distance>tol)
     {
-      return -1;
+      return dv.size();
     }
-    return min_disjunct;
+    else
+    {
+      return min_disjunct;
+    }
   }
   else
   {
     //TODO: merge heuristic for other templates
+    std::cout << "Merge heuristic template kind not yet implemented" << std::endl;
+    assert(false);
   }  
 }
 

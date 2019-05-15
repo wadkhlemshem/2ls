@@ -30,7 +30,7 @@ bool strategy_solver_disjunctivet::iterate(
   bool improved=false;
 
   disjunctive_domaint::unresolved_edget e=get_unresolved_edge(inv);
-  if (e.disjunct==0)
+  if (e.disjunct==inv.size())
   {
     // no more unresolved edges
     return improved;
@@ -82,8 +82,8 @@ strategy_solver_disjunctivet::get_unresolved_edge(
     solver.pop_context();
     return e;
   }
-  
-  return disjunctive_domaint::unresolved_edget(0,symbolic_patht());
+  // couldn't find a feasible edge
+  return disjunctive_domaint::unresolved_edget(value.size(),symbolic_patht());
 }
 
 /*******************************************************************\
