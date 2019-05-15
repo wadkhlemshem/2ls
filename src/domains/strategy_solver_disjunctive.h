@@ -31,6 +31,9 @@ public:
 
   disjunctive_domaint::unresolved_edget get_unresolved_edge(
     const disjunctive_domaint::disjunctive_valuet &value);
+  invariantt get_post(
+    const disjunctive_domaint::unresolved_edget &e,
+    disjunctive_domaint::disjunctive_valuet &inv);
 
 protected:
   disjunctive_domaint &disjunctive_domain;

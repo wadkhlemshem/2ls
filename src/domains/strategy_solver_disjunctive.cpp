@@ -7,6 +7,7 @@ Author: Johanan Wahlang
 \*******************************************************************/
 
 #include "strategy_solver_disjunctive.h"
+#include "strategy_solver_enumeration.h"
 
 /*******************************************************************\
 
@@ -34,6 +35,8 @@ bool strategy_solver_disjunctivet::iterate(
     // no more unresolved edges
     return improved;
   }
+
+  invariantt post=get_post(e,inv);
 
   return improved;
 }
@@ -81,4 +84,37 @@ strategy_solver_disjunctivet::get_unresolved_edge(
   }
   
   return disjunctive_domaint::unresolved_edget(0,symbolic_patht());
+}
+
+/*******************************************************************\
+
+Function: strategy_solver_disjunctivet::get_post
+
+  Inputs:
+
+ Outputs:
+
+ Purpose:
+
+\*******************************************************************/
+
+strategy_solver_disjunctivet::invariantt
+strategy_solver_disjunctivet::get_post(
+  const disjunctive_domaint::unresolved_edget &e,
+  disjunctive_domaint::disjunctive_valuet &_inv)
+{
+  domaint *_domain=disjunctive_domain.base_domain();
+  disjunctive_domaint::disjunctt d=e.disjunct;
+  symbolic_patht p=e.path;
+  strategy_solver_baset::invariantt inv=_inv[d];
+  if (disjunctive_domain.get_template_kind()==disjunctive_domaint::TPOLYHEDRA)
+  {
+    tpolyhedra_domaint domain=*static_cast<tpolyhedra_domaint *>(_domain);
+    domain.restrict_to_sympath(p);
+    strategy_solver_enumerationt strategy_solver(
+      domain,solver,ns);
+    strategy_solver.iterate(inv);
+    domain.undo_restriction();
+  }
+  return inv;
 }
