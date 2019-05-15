@@ -29,6 +29,9 @@ public:
 
   virtual bool iterate(invariantt &inv);
 
+  disjunctive_domaint::unresolved_edget get_unresolved_edge(
+    const disjunctive_domaint::disjunctive_valuet &value);
+
 protected:
   disjunctive_domaint &disjunctive_domain;
   local_SSAt &SSA;

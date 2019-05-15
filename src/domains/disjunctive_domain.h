@@ -84,12 +84,15 @@ public:
   };
   
 
-  struct unresolved_edget
+  class unresolved_edget
   {
+  public:
     disjunctt disjunct;
     symbolic_patht path;
 
-    unresolved_edget(
+    inline unresolved_edget() { }
+
+    inline unresolved_edget(
       disjunctt _disjunct,
       symbolic_patht _path):
       disjunct(_disjunct),
@@ -182,6 +185,9 @@ public:
     const tpolyhedra_domaint::templ_valuet &value1,
     const tpolyhedra_domaint::templ_valuet &value2);
   ieee_floatt distance(const constant_exprt &v1, const constant_exprt &v2);
+
+
+  exprt get_disjunct_constraint(const disjunctt &d, const valuet &value);
 
 protected:
   domaint *base_domain_ptr;
