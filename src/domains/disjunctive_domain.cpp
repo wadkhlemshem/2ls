@@ -19,8 +19,6 @@ Author: Johanan Wahlang
 #include "util.h"
 #include "domain.h"
 
-#define SYMB_BOUND_VAR "symb_bound#"
-
 #define ENABLE_HEURISTICS
 
 /*******************************************************************\
@@ -66,11 +64,6 @@ Function: tpolyhedra_domaint::join
 
 void disjunctive_domaint::join(valuet &value1, const valuet &value2)
 {
-#if 0
-  if(templ.size()==0)
-    return domaint::join(value1, value2);
-#endif
-
   disjunctive_valuet &v1=static_cast<disjunctive_valuet&>(value1);
   const disjunctive_valuet &v2=static_cast<const disjunctive_valuet&>(value2);
   v1.resize(v1.size() + v2.size());
