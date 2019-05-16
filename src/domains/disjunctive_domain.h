@@ -31,7 +31,7 @@ public:
     TPOLYHEDRA, HEAP
   };
   typedef unsigned disjunctt;
-  typedef std::map<disjunctt, std::map<unsigned int,domaint>> templatet;
+  typedef std::map<disjunctt, std::map<disjunctt,domaint *>> templatet;
   typedef std::vector<guardt> guardst;
 
   class disjunctive_valuet:public valuet, public std::vector<valuet *>
