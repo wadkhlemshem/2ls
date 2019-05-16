@@ -34,6 +34,7 @@ Author: Peter Schrammel
 #include "strategy_solver_heap.h"
 #include "strategy_solver_heap_tpolyhedra.h"
 #include "strategy_solver_heap_tpolyhedra_sympath.h"
+#include "strategy_solver_disjunctive.h"
 
 // NOLINTNEXTLINE(*)
 #define BINSEARCH_SOLVER strategy_solver_binsearcht(\
@@ -146,6 +147,13 @@ void ssa_analyzert::operator()(
         template_generator);
       result=new heap_tpolyhedra_domaint::heap_tpolyhedra_valuet();
     }
+  }
+  else if(template_generator.options.get_bool_option("disjunctive-intervals") ||
+          template_generator.options.get_bool_option("disjunctive-zones") ||
+          template_generator.options.get_bool_option("disjunctive-octagons"))
+  {
+    strategy_solver=new strategy_solver_disjunctivet(*static_cast<disjunctive_domaint *>(domain),solver,SSA,SSA.ns,template_generator);
+    result=new disjunctive_domaint::disjunctive_valuet();
   }
   else
   {
