@@ -48,7 +48,7 @@ void disjunctive_domaint::initialize(valuet &value)
   {
     for (auto &t : d.second)
     {
-      t.second.initialize(v[d.first]);
+      t.second.initialize(*v[d.first]);
     }
   }
 }
@@ -107,7 +107,7 @@ void disjunctive_domaint::output_value(
     auto t=d.second;
     for (auto &i : t)
     {
-      i.second.output_value(out,v[d.first],ns);
+      i.second.output_value(out,*v[d.first],ns);
     }
   }
 }
@@ -160,7 +160,7 @@ void disjunctive_domaint::project_on_vars(
   exprt disjunct_result;
   for (auto &d : templ)
   {
-    d.second.begin()->second.project_on_vars(v[d.first], vars, disjunct_result);
+    d.second.begin()->second.project_on_vars(*v[d.first], vars, disjunct_result);
     result = or_exprt(result, disjunct_result);
   }
 }
@@ -183,14 +183,14 @@ disjunctive_domaint::disjunctt disjunctive_domaint::merge_heuristic(disjunctive_
   {
     tpolyhedra_domaint::templ_valuet &v_new=static_cast<tpolyhedra_domaint::templ_valuet &>(value);
     disjunctt d=0;    
-    tpolyhedra_domaint::templ_valuet &v=static_cast<tpolyhedra_domaint::templ_valuet &>(dv[d]);
-    lex_metrict distance=hausdorff_distance(v, v_new);
+    tpolyhedra_domaint::templ_valuet *v=static_cast<tpolyhedra_domaint::templ_valuet *>(dv[d]);
+    lex_metrict distance=hausdorff_distance(*v, v_new);
     lex_metrict min_distance=distance;
     disjunctt min_disjunct=d;
     for (; d<dv.size(); d++)
     {
-      tpolyhedra_domaint::templ_valuet &v=static_cast<tpolyhedra_domaint::templ_valuet &>(dv[d]);
-      lex_metrict distance=hausdorff_distance(v, v_new);
+      tpolyhedra_domaint::templ_valuet *v=static_cast<tpolyhedra_domaint::templ_valuet *>(dv[d]);
+      lex_metrict distance=hausdorff_distance(*v, v_new);
       if (distance<min_distance)
       {
         min_distance=distance;

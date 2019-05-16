@@ -67,7 +67,7 @@ strategy_solver_disjunctivet::get_unresolved_edge(
     d = it->disjunct;
     p = it->path;
 
-    solver<<disjunctive_domain.get_disjunct_constraint(d,value[d]);
+    solver<<disjunctive_domain.get_disjunct_constraint(d,*value[d]);
     solver<<p.get_expr();
 
     if (solver()==decision_proceduret::D_SATISFIABLE)
@@ -106,7 +106,7 @@ strategy_solver_disjunctivet::get_post(
   domaint *_domain=disjunctive_domain.base_domain();
   disjunctive_domaint::disjunctt d=e.disjunct;
   symbolic_patht p=e.path;
-  strategy_solver_baset::invariantt inv=_inv[d];
+  strategy_solver_baset::invariantt inv=*_inv[d];
   if (disjunctive_domain.get_template_kind()==disjunctive_domaint::TPOLYHEDRA)
   {
     tpolyhedra_domaint domain=*static_cast<tpolyhedra_domaint *>(_domain);
