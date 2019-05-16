@@ -61,6 +61,10 @@ public:
 
   optionst options; // copy: we may override options
 
+  local_SSAt::locationt loophead_loc; // for disjunctive domains
+  bool loop_present;
+  std::vector<exprt> guards;  
+
 protected:
   const ssa_dbt &ssa_db;
   const ssa_local_unwindert &ssa_local_unwinder;
@@ -75,6 +79,13 @@ protected:
     const local_SSAt &SSA,
     local_SSAt::nodest::const_iterator loop_begin,
     local_SSAt::nodest::const_iterator loop_end);
+
+  void collect_guards(
+    const local_SSAt &SSA,
+    local_SSAt::nodest::const_iterator loop_begin,
+    local_SSAt::nodest::const_iterator loop_end);
+
+  void collect_guards(const exprt &expr);
 
   void filter_template_domain();
   void filter_equality_domain();

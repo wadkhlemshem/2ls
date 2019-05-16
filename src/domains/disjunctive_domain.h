@@ -32,7 +32,6 @@ public:
   };
   typedef unsigned disjunctt;
   typedef std::map<disjunctt, std::map<disjunctt,domaint *>> templatet;
-  typedef std::vector<guardt> guardst;
 
   class disjunctive_valuet:public valuet, public std::vector<valuet *>
   {
@@ -126,13 +125,11 @@ public:
     const namespacet &_ns,
     const template_kindt _template_kind,
     const disjunctt _max,
-    const guardst _guards,
     const lex_metrict _tol):
     domaint(_domain_number, _renaming_map, _ns),
     template_kind(_template_kind),
     max(_max),
     templ(),
-    guards(_guards),
     tol(_tol),
     unresolved_set(),
     seen_set()
@@ -190,7 +187,6 @@ protected:
   template_kindt template_kind;
   disjunctt max;
   templatet templ;
-  guardst guards;
   lex_metrict tol;
   unresolved_sett unresolved_set;
   seen_sett seen_set;

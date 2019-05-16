@@ -16,6 +16,7 @@ Author: Johanan Wahlang
 class strategy_solver_disjunctivet:public strategy_solver_baset
 {
 public:
+  typedef std::vector<exprt> guardst;
   strategy_solver_disjunctivet(
     disjunctive_domaint &_disjunctive_domain,
     incremental_solvert &_solver,
@@ -38,6 +39,7 @@ public:
 protected:
   disjunctive_domaint &disjunctive_domain;
   local_SSAt &SSA;
+  guardst guards;
 };
 
 #endif //CPROVER_2LS_DOMAINS_STRATEGY_SOLVER_DISJUNCTIVE_DOMAIN_H
