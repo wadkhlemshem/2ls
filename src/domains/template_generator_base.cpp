@@ -21,6 +21,7 @@ Author: Peter Schrammel
 #include "heap_domain.h"
 #include "heap_tpolyhedra_domain.h"
 #include "heap_tpolyhedra_sympath_domain.h"
+#include "disjunctive_domain.h"
 
 #ifdef DEBUG
 #include <iostream>
@@ -151,6 +152,7 @@ void template_generator_baset::collect_variables_loop(
 {
   // used for renaming map
   var_listt pre_state_vars, post_state_vars;
+  unsigned int loop_count=0;
 
   // add loop variables
   for(local_SSAt::nodest::const_iterator n_it=SSA.nodes.begin();
@@ -158,6 +160,18 @@ void template_generator_baset::collect_variables_loop(
   {
     if(n_it->loophead!=SSA.nodes.end()) // we've found a loop
     {
+      loop_present=true;
+      loop_count++;
+      if (options.get_bool_option("disjunctive_domains"))
+      {
+        assert(loop_count<=1);
+      }
+
+      loophead_loc=n_it->loophead->location;
+      
+      //collect guards for paths
+      collect_guards(SSA,n_it->loophead,n_it);
+
       exprt pre_guard, post_guard;
       get_pre_post_guards(SSA, n_it, pre_guard, post_guard);
 
@@ -808,6 +822,45 @@ void template_generator_baset::instantiate_standard_domains(
       domain_ptr=new heap_tpolyhedra_domaint(
         domain_number, renaming_map, var_specs, SSA.ns, polyhedra_kind);
   }
+  else if (options.get_bool_option("disjunctive-intervals"))
+  {
+    filter_template_domain();
+    disjunctive_domaint::template_kindt template_kind=disjunctive_domaint::TPOLYHEDRA;
+    disjunctive_domaint::lex_metrict tol(0,mp_integer(1));
+    unsigned int max=options.get_unsigned_int_option("disjunct-limit");
+    domain_ptr=new disjunctive_domaint(
+      domain_number,renaming_map,var_specs,SSA.ns,template_kind,max,tol);
+
+    domaint *base_domain_ptr=static_cast<disjunctive_domaint *>(domain_ptr)->base_domain();
+    static_cast<tpolyhedra_domaint *>(base_domain_ptr)->add_interval_template(var_specs,SSA.ns);
+  }
+  else if (options.get_bool_option("disjunctive-zones"))
+  {
+    filter_template_domain();
+    disjunctive_domaint::template_kindt template_kind=disjunctive_domaint::TPOLYHEDRA;
+    disjunctive_domaint::lex_metrict tol(0,mp_integer(1));
+    unsigned int max=options.get_unsigned_int_option("disjunct-limit");
+    domain_ptr=new disjunctive_domaint(
+      domain_number,renaming_map,var_specs,SSA.ns,template_kind,max,tol);
+
+    domaint *base_domain_ptr=static_cast<disjunctive_domaint *>(domain_ptr)->base_domain();
+    static_cast<tpolyhedra_domaint *>(base_domain_ptr)->add_difference_template(var_specs,SSA.ns);
+    static_cast<tpolyhedra_domaint *>(base_domain_ptr)->add_interval_template(var_specs,SSA.ns);
+  }
+  else if (options.get_bool_option("disjunctive-octagons"))
+  {
+    filter_template_domain();
+    disjunctive_domaint::template_kindt template_kind=disjunctive_domaint::TPOLYHEDRA;
+    disjunctive_domaint::lex_metrict tol(0,mp_integer(1));
+    unsigned int max=options.get_unsigned_int_option("disjunct-limit");
+    domain_ptr=new disjunctive_domaint(
+      domain_number,renaming_map,var_specs,SSA.ns,template_kind,max,tol);
+
+    domaint *base_domain_ptr=static_cast<disjunctive_domaint *>(domain_ptr)->base_domain();
+    static_cast<tpolyhedra_domaint *>(base_domain_ptr)->add_sum_template(var_specs,SSA.ns);
+    static_cast<tpolyhedra_domaint *>(base_domain_ptr)->add_difference_template(var_specs,SSA.ns);
+    static_cast<tpolyhedra_domaint *>(base_domain_ptr)->add_interval_template(var_specs,SSA.ns);
+  }
 }
 
 void template_generator_baset::filter_heap_interval_domain()
@@ -862,4 +915,48 @@ std::vector<exprt> template_generator_baset::collect_record_frees(
     }
   }
   return result;
+}
+
+void template_generator_baset::collect_guards(
+  const local_SSAt &SSA,
+  local_SSAt::nodest::const_iterator loop_begin,
+  local_SSAt::nodest::const_iterator loop_end)
+{
+  auto n_it=loop_begin;
+  do
+  {
+    n_it++;
+    for (auto eq_it=n_it->equalities.begin();eq_it!=n_it->equalities.end();eq_it++)
+    {
+      std::string id=id2string(to_symbol_expr(eq_it->lhs()).get_identifier());
+      if (id.find("phi")!=id.npos)
+      {
+        collect_guards(eq_it->rhs());
+      }
+    }
+  } while (n_it!=loop_end);
+}
+
+void template_generator_baset::collect_guards(
+  const exprt &expr)
+{
+  if(expr.id()==ID_if)
+  {
+    auto it=guards.begin();
+    for (;it!=guards.end();it++)
+    {
+      if (*it==expr.op0())
+      {
+        break;
+      }
+    }
+    if (it==guards.end())
+    {
+      guards.push_back(expr.op0());
+    }
+  }
+  forall_operands(it,expr)
+  {
+    collect_guards(*it);
+  }
 }
