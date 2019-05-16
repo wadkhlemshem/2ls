@@ -37,19 +37,18 @@ Function: disjunctive_domaint::initialize
 
 void disjunctive_domaint::initialize(valuet &value)
 {
-#if 0
-  if(templ.size()==0)
-    return domaint::initialize(value);
-#endif
-
-  disjunctive_valuet &v=static_cast<disjunctive_valuet &>(value);
-  v.resize(templ.size());
-  for (auto &d : templ)
+  disjunctive_valuet &dv=static_cast<disjunctive_valuet &>(value);
+  if (template_kind==TPOLYHEDRA)
   {
-    for (auto &t : d.second)
+    for (auto &v : dv)
     {
-      t.second.initialize(*v[d.first]);
+      tpolyhedra_domaint *domain=static_cast<tpolyhedra_domaint *>(base_domain_ptr);
+      domain->initialize(*v);
     }
+  }
+  else
+  {
+    assert(false);
   }
 }
 
@@ -100,15 +99,20 @@ void disjunctive_domaint::output_value(
   const domaint::valuet &value,
   const namespacet &ns) const
 {
-  const disjunctive_valuet &v = static_cast<const disjunctive_valuet &>(value);
+  const disjunctive_valuet &dv=static_cast<const disjunctive_valuet &>(value);
 
-  for (auto &d : templ)
+  if (template_kind==TPOLYHEDRA)
   {
-    auto t=d.second;
-    for (auto &i : t)
+    tpolyhedra_domaint *domain=static_cast<tpolyhedra_domaint *>(base_domain_ptr);
+    for (auto &v : dv)
     {
-      i.second.output_value(out,*v[d.first],ns);
+      domain->output_value(out,*v,ns);
+      out << " || " << std::endl;
     }
+  }
+  else
+  {
+    assert(false);
   }
 }
 
@@ -128,12 +132,13 @@ void disjunctive_domaint::output_domain(
   std::ostream &out,
   const namespacet &ns) const
 {
-  for (auto &d : templ)
+  switch (template_kind)
   {
-    for (auto &i : d.second)
-    {
-      i.second.output_domain(out,ns);
-    }
+    case TPOLYHEDRA:
+      static_cast<tpolyhedra_domaint *>(base_domain_ptr)->output_domain(out,ns);
+      break;
+    default:
+      assert(false);
   }
 }
 
@@ -154,14 +159,27 @@ void disjunctive_domaint::project_on_vars(
   const domaint::var_sett &vars,
   exprt &result)
 {
-  disjunctive_valuet &v=static_cast<disjunctive_valuet &>(value);
+  disjunctive_valuet &dv=static_cast<disjunctive_valuet &>(value);
 
+  if (dv.size()==0)
+  {
+    result = true_exprt();
+    return;
+  }
   result = false_exprt();
   exprt disjunct_result;
-  for (auto &d : templ)
+  if (template_kind==TPOLYHEDRA)
   {
-    d.second.begin()->second.project_on_vars(*v[d.first], vars, disjunct_result);
-    result = or_exprt(result, disjunct_result);
+    tpolyhedra_domaint *domain=static_cast<tpolyhedra_domaint *>(base_domain_ptr);
+    for (auto &v : dv)
+    {
+      domain->project_on_vars(*v,vars,disjunct_result);
+      result = or_exprt(result,disjunct_result);
+    }
+  }
+  else
+  {
+    assert(false);
   }
 }
 
