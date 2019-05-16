@@ -223,6 +223,25 @@ void twols_parse_optionst::get_command_line_options(optionst &options)
     if(cmdline.isset("sympath"))
       options.set_option("sympath", true);
   }
+  // disjunctive domains only work with inlined code for now
+  else if(cmdline.isset("disjunctive-intervals"))
+  {
+    options.set_option("disjunctive-intervals", true);
+    options.set_option("disjunctive_domains", true);
+    options.set_option("inline", true);
+  }
+  else if(cmdline.isset("disjunctive-zones"))
+  {
+    options.set_option("disjunctive-zones", true);
+    options.set_option("disjunctive_domains", true);
+    options.set_option("inline", true);
+  }
+  else if(cmdline.isset("disjunctive-octagons"))
+  {
+    options.set_option("disjunctive-octagons", true);
+    options.set_option("disjunctive_domains", true);
+    options.set_option("inline", true);
+  }
   else
   {
     if(cmdline.isset("zones"))
@@ -534,6 +553,12 @@ int twols_parse_optionst::doit()
     status() << "Using heap domain with interval domain for values" << eom;
   else if(options.get_bool_option("heap-zones"))
     status() << "Using heap domain with zones domain for values" << eom;
+  else if(options.get_bool_option("disjunctive-intervals"))
+    status() << "Using disjunctive intervals domain" << eom;
+  else if(options.get_bool_option("disjunctive-zones"))
+    status() << "Using disjunctive zones domain" << eom;
+  else if(options.get_bool_option("disjunctive-octagons"))
+    status() << "Using disjunctive octagons domain" << eom;
   else
   {
     if(options.get_bool_option("intervals"))
