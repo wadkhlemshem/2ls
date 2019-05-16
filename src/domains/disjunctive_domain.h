@@ -42,11 +42,11 @@ public:
   {
   public:
     unsigned int incomparable;
-    ieee_floatt distance;
+    mp_integer distance;
 
     lex_metrict(
-      unsigned int _incomparable,
-      ieee_floatt _distance):
+      unsigned int _incomparable=0,
+      mp_integer _distance=0):
       incomparable(_incomparable),
       distance(_distance)
       {}
@@ -184,8 +184,7 @@ public:
   lex_metrict hausdorff_distance(
     const tpolyhedra_domaint::templ_valuet &value1,
     const tpolyhedra_domaint::templ_valuet &value2);
-  ieee_floatt distance(const constant_exprt &v1, const constant_exprt &v2);
-
+  mp_integer distance(const constant_exprt &v1, const constant_exprt &v2);
 
   exprt get_disjunct_constraint(const disjunctt &d, const valuet &value);
 
