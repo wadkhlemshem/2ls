@@ -193,6 +193,10 @@ void twols_parse_optionst::get_command_line_options(optionst &options)
   if(cmdline.isset("error-label"))
     options.set_option("error-label", cmdline.get_value("error-label"));
 
+  // max disjunct
+  if (cmdline.isset("disjunct-limit"))
+    options.set_option("disjunct-limit", cmdline.get_value("disjunct-limit"));
+
   if(cmdline.isset("havoc"))
     options.set_option("havoc", true);
   else if(cmdline.isset("equalities"))
@@ -229,18 +233,24 @@ void twols_parse_optionst::get_command_line_options(optionst &options)
     options.set_option("disjunctive-intervals", true);
     options.set_option("disjunctive_domains", true);
     options.set_option("inline", true);
+    if (!cmdline.isset("disjunct-limit"))
+      options.set_option("disjunct-limit", 2);
   }
   else if(cmdline.isset("disjunctive-zones"))
   {
     options.set_option("disjunctive-zones", true);
     options.set_option("disjunctive_domains", true);
     options.set_option("inline", true);
+    if (!cmdline.isset("disjunct-limit"))
+      options.set_option("disjunct-limit", 2);
   }
   else if(cmdline.isset("disjunctive-octagons"))
   {
     options.set_option("disjunctive-octagons", true);
     options.set_option("disjunctive_domains", true);
     options.set_option("inline", true);
+    if (!cmdline.isset("disjunct-limit"))
+      options.set_option("disjunct-limit", 2);
   }
   else
   {
