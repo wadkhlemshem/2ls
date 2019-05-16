@@ -79,7 +79,6 @@ public:
       {
         return (m1.distance>m2.distance);
       }
-      
     }
   };
   
@@ -100,7 +99,7 @@ public:
     {}
   };
   
-  typedef std::set<unresolved_edget> unresolved_sett;
+  typedef std::vector<unresolved_edget> unresolved_sett;
 
   struct seen_edget
   {
@@ -118,7 +117,7 @@ public:
     {}
   };
   
-  typedef std::set<seen_edget> seen_sett;
+  typedef std::vector<seen_edget> seen_sett;
 
   disjunctive_domaint(
     unsigned int _domain_number,
@@ -128,15 +127,13 @@ public:
     const template_kindt _template_kind,
     const disjunctt _max,
     const guardst _guards,
-    const lex_metrict _tol,
-    local_SSAt::locationt _location):
+    const lex_metrict _tol):
     domaint(_domain_number, _renaming_map, _ns),
     template_kind(_template_kind),
     max(_max),
     templ(),
     guards(_guards),
     tol(_tol),
-    location(_location),
     unresolved_set(),
     seen_set()
   {
@@ -171,11 +168,11 @@ public:
     const var_sett &vars,
     exprt &result) override;
 
-  template_kindt &get_template_kind()
+  inline template_kindt &get_template_kind()
   {
     return template_kind;
   }
-  domaint *base_domain()
+  inline domaint *base_domain()
   {
     return base_domain_ptr;
   }
@@ -195,7 +192,6 @@ protected:
   templatet templ;
   guardst guards;
   lex_metrict tol;
-  local_SSAt::locationt location;
   unresolved_sett unresolved_set;
   seen_sett seen_set;
 
