@@ -356,3 +356,9 @@ mp_integer disjunctive_domaint::distance(const constant_exprt &v1, const constan
     assert(false); // types do not match or are not supported
   }
 }
+
+exprt disjunctive_domaint::get_disjunct_constraint(const disjunctt &d, const valuet &value)
+{
+  //TODO: implement actual disjunct constraint
+  return true_exprt();
+}
