@@ -12,6 +12,7 @@ Author: Johanan Wahlang
 #include <ssa/local_ssa.h>
 #include "strategy_solver_base.h"
 #include "disjunctive_domain.h"
+#include "template_generator_base.h"
 
 class strategy_solver_disjunctivet:public strategy_solver_baset
 {
@@ -21,10 +22,12 @@ public:
     disjunctive_domaint &_disjunctive_domain,
     incremental_solvert &_solver,
     local_SSAt &_SSA,
-    const namespacet &_ns):
+    const namespacet &_ns,
+    template_generator_baset &_template_generator):
     strategy_solver_baset(_solver, _ns),
     disjunctive_domain(_disjunctive_domain),
-    SSA(_SSA)
+    SSA(_SSA),
+    template_generator(_template_generator)
   {
   }
 
@@ -40,6 +43,7 @@ protected:
   disjunctive_domaint &disjunctive_domain;
   local_SSAt &SSA;
   guardst guards;
+  template_generator_baset &template_generator;
 };
 
 #endif //CPROVER_2LS_DOMAINS_STRATEGY_SOLVER_DISJUNCTIVE_DOMAIN_H
