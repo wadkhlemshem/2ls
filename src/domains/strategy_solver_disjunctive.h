@@ -29,6 +29,7 @@ public:
     SSA(_SSA),
     template_generator(_template_generator)
   {
+    enumerate_all_paths(template_generator.guards);
   }
 
   virtual bool iterate(invariantt &inv);
@@ -42,8 +43,10 @@ public:
 protected:
   disjunctive_domaint &disjunctive_domain;
   local_SSAt &SSA;
-  guardst guards;
   template_generator_baset &template_generator;
+  std::vector<symbolic_patht> all_paths;
+
+  void enumerate_all_paths(guardst &guards);
 };
 
 #endif //CPROVER_2LS_DOMAINS_STRATEGY_SOLVER_DISJUNCTIVE_DOMAIN_H

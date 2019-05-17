@@ -121,3 +121,45 @@ strategy_solver_disjunctivet::get_post(
   }
   return inv;
 }
+
+/*******************************************************************\
+
+Function: strategy_solver_disjunctivet::enumerate_all_paths
+
+  Inputs:
+
+ Outputs:
+
+ Purpose: Enumerate all paths inside the loop
+
+\*******************************************************************/
+
+void strategy_solver_disjunctivet::enumerate_all_paths(guardst &guards)
+{
+  for (auto &guard : guards)
+  {
+    if (all_paths.empty())
+    {
+      symbolic_patht p;
+      p.path_map[guard] = true;
+      all_paths.push_back(p);
+      p.path_map[guard] = false;
+      all_paths.push_back(p);
+    }
+    else
+    {
+      std::vector<symbolic_patht> new_paths;
+      for (auto &path : all_paths)
+      {
+        symbolic_patht path_(path);
+        path.path_map[guard] = true;
+        path_.path_map[guard] = false;
+        new_paths.push_back(path_);
+      }
+      for (auto &path : new_paths)
+      {
+        all_paths.push_back(path);
+      }
+    }
+  }
+}
