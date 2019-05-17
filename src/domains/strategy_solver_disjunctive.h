@@ -77,6 +77,7 @@ protected:
     invariantt *post_inv);
   bool find_loop(local_SSAt::locationt &loophead_loc, loopt *loop);
   void rename(exprt &expr, const std::string &suffix, disjunctive_domaint::disjunctt d_src);
+  void add_loophead(disjunctive_domaint::disjunctt d);
 };
 
 #endif //CPROVER_2LS_DOMAINS_STRATEGY_SOLVER_DISJUNCTIVE_DOMAIN_H

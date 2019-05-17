@@ -47,6 +47,7 @@ bool strategy_solver_disjunctivet::iterate(
       inv.push_back(
         new tpolyhedra_domaint::templ_valuet(
           static_cast<tpolyhedra_domaint::templ_valuet>(result)));
+      add_loophead(0); // SSA loophead for first disjunct
       
       for (auto path : all_paths)
       {
@@ -79,6 +80,7 @@ bool strategy_solver_disjunctivet::iterate(
       inv.push_back(
         new tpolyhedra_domaint::templ_valuet(
           *static_cast<tpolyhedra_domaint::templ_valuet *>(post)));
+      add_loophead(d_sink); // SSA loophead for new disjunct
     }
     else
     {
@@ -346,4 +348,29 @@ void strategy_solver_disjunctivet::rename(
   }
   Forall_operands(it, expr)
     rename(*it, suffix, d_src);
+}
+
+/*******************************************************************\
+
+Function: strategy_solver_disjunctivet::add_loophead
+
+  Inputs:
+
+ Outputs:
+
+ Purpose:
+
+\*******************************************************************/
+
+void strategy_solver_disjunctivet::add_loophead(
+  disjunctive_domaint::disjunctt d)
+{
+  local_SSAt::nodest::iterator n_it=loop->body_nodes.begin();
+  loopheads->push_back(*n_it);
+  local_SSAt::nodet &node=loopheads->back();
+  for (auto eq:node.equalities)
+  {
+    rename(eq,"",d);
+    solver << eq;
+  }
 }
