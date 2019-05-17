@@ -144,6 +144,14 @@ public:
   {
     if (base_domain_ptr!=NULL)
       delete base_domain_ptr;
+    for (auto &i:templ)
+    {
+      for (auto &j:i.second)
+      {
+        if (j.second!=NULL)
+          delete j.second;
+      }
+    }
   }
 
   virtual void initialize(valuet &value);
