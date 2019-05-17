@@ -32,6 +32,31 @@ bool strategy_solver_disjunctivet::iterate(
 
   bool improved=false;
 
+  // initial strategy
+  if (inv.size()==0)
+  {
+    if (disjunctive_domain.template_kind==disjunctive_domaint::TPOLYHEDRA)
+    {
+      auto result=tpolyhedra_domaint::templ_valuet();
+      tpolyhedra_domaint *domain=static_cast<tpolyhedra_domaint *>(disjunctive_domain.base_domain());
+      domain->initialize(result);
+      strategy_solver_enumerationt strategy_solver(
+        *domain,solver,ns);
+      strategy_solver.iterate(result);
+      inv.push_back(new tpolyhedra_domaint::templ_valuet(static_cast<tpolyhedra_domaint::templ_valuet>(result)));
+      
+      for (auto path : all_paths)
+      {
+        disjunctive_domaint::unresolved_edget e(0,path);
+        disjunctive_domain.unresolved_set.push_back(e);
+      }
+    }
+    else
+    {
+      assert(false);
+    }
+  }
+
   disjunctive_domaint::unresolved_edget e=get_unresolved_edge(inv);
   if (e.disjunct==inv.size())
   {
