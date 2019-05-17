@@ -85,8 +85,8 @@ bool strategy_solver_disjunctivet::iterate(
     else
     {
       domain->join(*inv[d_sink],*post); // join value
-      // TODO: add loop body
     }
+    add_edge(d_src,p,d_sink);
     // TODO: create new template
   }
   else
@@ -373,4 +373,54 @@ void strategy_solver_disjunctivet::add_loophead(
     rename(eq,"",d);
     solver << eq;
   }
+}
+
+/*******************************************************************\
+
+Function: strategy_solver_disjunctivet::add_edge
+
+  Inputs:
+
+ Outputs:
+
+ Purpose:
+
+\*******************************************************************/
+
+void strategy_solver_disjunctivet::add_edge(
+  disjunctive_domaint::disjunctt d_src, 
+  symbolic_patht &p,
+  disjunctive_domaint::disjunctt d_sink)
+{
+  debug() << "Adding new SSA nodes" << eom;
+  disjunctive_domaint::disjunctt _d_src,_d_sink;
+  symbolic_patht _p;
+  local_SSAt::nodest::iterator n_it=loop->body_nodes.begin();
+  std::string suffix="_"+std::to_string(current_count);
+  for (n_it++;n_it!=loop->body_nodes.end();n_it++)
+  {
+    if (n_it->equalities.empty() &&
+        n_it->constraints.empty() &&
+        n_it->function_calls.empty())
+      continue;
+    
+    loop_copies->push_back(*n_it);
+    auto &node=loop_copies->back();
+    for (local_SSAt::nodet::equalitiest::iterator e_it=node.equalities.begin();
+          e_it!=node.equalities.end();e_it++)
+    {
+      rename(*e_it,suffix,d_src);
+    }
+    for (local_SSAt::nodet::constraintst::iterator c_it=node.constraints.begin();
+          c_it!=node.constraints.end();c_it++)
+    {
+      rename(*c_it,suffix,d_src);
+    }
+    for (local_SSAt::nodet::function_callst::iterator f_it=node.function_calls.begin();
+          f_it!=node.function_calls.end();f_it)
+    {
+      rename(*f_it,suffix,d_src);
+    }
+  }
+  current_count++;
 }
