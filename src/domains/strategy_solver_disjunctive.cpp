@@ -64,7 +64,12 @@ bool strategy_solver_disjunctivet::iterate(
     return improved;
   }
 
-  invariantt post=get_post(e,inv);
+  disjunctive_domaint::disjunctt d_src=e.disjunct;
+  disjunctive_domaint::disjunctt d_sink;
+  symbolic_patht p=e.path;
+  
+  invariantt *post=new tpolyhedra_domaint::templ_valuet(*static_cast<tpolyhedra_domaint::templ_valuet *>(inv[d_src]));
+  get_post(p,inv, post);
 
   return improved;
 }
@@ -134,25 +139,31 @@ Function: strategy_solver_disjunctivet::get_post
 
 \*******************************************************************/
 
-strategy_solver_disjunctivet::invariantt
-strategy_solver_disjunctivet::get_post(
-  const disjunctive_domaint::unresolved_edget &e,
-  disjunctive_domaint::disjunctive_valuet &_inv)
+void strategy_solver_disjunctivet::get_post(
+  const symbolic_patht &p,
+  const disjunctive_domaint::disjunctive_valuet &pre_inv,
+  invariantt *post_inv)
 {
+  debug() << "Computing post" << eom;
   domaint *_domain=disjunctive_domain.base_domain();
-  disjunctive_domaint::disjunctt d=e.disjunct;
-  symbolic_patht p=e.path;
-  strategy_solver_baset::invariantt inv=*_inv[d];
+  debug() << "--------------------------------------------------" << eom;
   if (disjunctive_domain.get_template_kind()==disjunctive_domaint::TPOLYHEDRA)
   {
-    tpolyhedra_domaint domain=*static_cast<tpolyhedra_domaint *>(_domain);
+    tpolyhedra_domaint domain(*static_cast<tpolyhedra_domaint *>(_domain));
     domain.restrict_to_sympath(p);
     strategy_solver_enumerationt strategy_solver(
       domain,solver,ns);
-    strategy_solver.iterate(inv);
+    domain.output_value(debug(),*post_inv,ns);
+    debug() << "-------------------------------------------------" << eom;
+    strategy_solver.iterate(*post_inv);
+    domain.output_value(debug(),*post_inv,ns);
+    debug() << "--------------------------------------------------" << eom;
     domain.undo_restriction();
   }
-  return inv;
+  else
+  {
+    assert(false);
+  }
 }
 
 /*******************************************************************\

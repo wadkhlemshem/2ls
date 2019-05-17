@@ -44,9 +44,10 @@ protected:
   void enumerate_all_paths(guardst &guards);
   disjunctive_domaint::unresolved_edget get_unresolved_edge(
     const disjunctive_domaint::disjunctive_valuet &value);
-  invariantt get_post(
-    const disjunctive_domaint::unresolved_edget &e,
-    disjunctive_domaint::disjunctive_valuet &inv);
+  void get_post(
+    const symbolic_patht &p,
+    const disjunctive_domaint::disjunctive_valuet &pre_inv,
+    invariantt *post_inv);
 };
 
 #endif //CPROVER_2LS_DOMAINS_STRATEGY_SOLVER_DISJUNCTIVE_DOMAIN_H
