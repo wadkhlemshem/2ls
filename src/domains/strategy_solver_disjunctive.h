@@ -17,6 +17,19 @@ Author: Johanan Wahlang
 class strategy_solver_disjunctivet:public strategy_solver_baset
 {
 public:
+  class loopt
+  {
+  public:
+    loopt():
+      body_nodes()
+    {
+    }
+    local_SSAt::nodest body_nodes;
+    std::vector<irep_idt> loophead_objects;
+    std::vector<irep_idt>::iterator find_loophead_object(const irep_idt &id);
+    void add_loophead_objects(exprt expr);
+  };
+
   typedef std::vector<exprt> guardst;
 
   strategy_solver_disjunctivet(
@@ -28,9 +41,18 @@ public:
     strategy_solver_baset(_solver, _ns),
     disjunctive_domain(_disjunctive_domain),
     SSA(_SSA),
-    template_generator(_template_generator)
+    template_generator(_template_generator),
+    current_count(0)
   {
     enumerate_all_paths(template_generator.guards);
+
+    assert(template_generator.loop_present);
+
+    loop=new loopt();
+    assert(find_loop(template_generator.loophead_loc,loop));
+
+    loop_copies=new local_SSAt::nodest();
+    loopheads=new local_SSAt::nodest();
   }
 
   virtual bool iterate(invariantt &inv);
@@ -41,6 +63,10 @@ protected:
   local_SSAt &SSA;
   template_generator_baset &template_generator;
   std::vector<symbolic_patht> all_paths;
+  local_SSAt::nodest *loop_copies;
+  local_SSAt::nodest *loopheads;
+  loopt *loop;
+  unsigned int current_count;
 
   void enumerate_all_paths(guardst &guards);
   disjunctive_domaint::unresolved_edget get_unresolved_edge(
@@ -49,6 +75,7 @@ protected:
     const symbolic_patht &p,
     const disjunctive_domaint::disjunctive_valuet &pre_inv,
     invariantt *post_inv);
+  bool find_loop(local_SSAt::locationt &loophead_loc, loopt *loop);
 };
 
 #endif //CPROVER_2LS_DOMAINS_STRATEGY_SOLVER_DISJUNCTIVE_DOMAIN_H

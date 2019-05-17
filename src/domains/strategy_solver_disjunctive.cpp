@@ -229,3 +229,87 @@ void strategy_solver_disjunctivet::enumerate_all_paths(guardst &guards)
     }
   }
 }
+
+/*******************************************************************\
+
+Function: strategy_solver_disjunctivet::find_loop
+
+  Inputs:
+
+ Outputs:
+
+ Purpose:
+
+\*******************************************************************/
+
+bool strategy_solver_disjunctivet::find_loop(
+  local_SSAt::locationt &loophead_loc, loopt *loop)
+{
+  local_SSAt::nodest::iterator n_it=SSA.find_node(loophead_loc);
+  if (n_it==SSA.nodes.end())
+    return false;
+  loop->body_nodes.push_back(*n_it);
+  auto &node=loop->body_nodes.back();
+  for (local_SSAt::nodet::equalitiest::iterator eq_it=node.equalities.begin();
+    eq_it!=node.equalities.end();eq_it++)
+  {
+    loop->add_loophead_objects(*eq_it);
+  }
+
+  for (n_it++;n_it->loophead->location!=loophead_loc;n_it++)
+  {
+    loop->body_nodes.push_back(*n_it);
+  }
+
+  return true;
+}
+
+/*******************************************************************\
+
+Function: strategy_solver_disjunctivet::loopt::add_loophead_object
+
+  Inputs:
+
+ Outputs:
+
+ Purpose:
+
+\*******************************************************************/
+
+void strategy_solver_disjunctivet::loopt::add_loophead_objects(exprt expr)
+{
+  if(expr.id()==ID_symbol ||
+     expr.id()==ID_nondet_symbol)
+  {
+    irep_idt id=expr.get(ID_identifier);
+    if (find_loophead_object(id)==loophead_objects.end())
+      loophead_objects.push_back(id);
+  }
+  Forall_operands(it, expr)
+    add_loophead_objects(*it);
+}
+
+/*******************************************************************\
+
+Function: strategy_solver_disjunctivet::loopt::find_loophead_object
+
+  Inputs:
+
+ Outputs:
+
+ Purpose:
+
+\*******************************************************************/
+
+std::vector<irep_idt>::iterator
+  strategy_solver_disjunctivet::loopt::find_loophead_object(
+    const irep_idt &id)
+{
+  std::vector<irep_idt>::iterator it=loophead_objects.begin();
+  for (;it!=loophead_objects.end();it++)
+  {
+    if (*it==id)
+      break;
+  }
+  return it;
+}
