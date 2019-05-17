@@ -84,9 +84,9 @@ protected:
     const std::string &sink_suffix);
   void add_loophead(disjunctive_domaint::disjunctt d);
   void add_edge(
-    disjunctive_domaint::disjunctt d_src, 
+    disjunctive_domaint::disjunctt src, 
     const symbolic_patht &p,
-    disjunctive_domaint::disjunctt d_sink);
+    disjunctive_domaint::disjunctt sink);
 };
 
 #endif //CPROVER_2LS_DOMAINS_STRATEGY_SOLVER_DISJUNCTIVE_DOMAIN_H

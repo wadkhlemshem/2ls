@@ -56,27 +56,27 @@ bool strategy_solver_disjunctivet::iterate(
 
     improved=true; // found an unresolved edge
 
-    disjunctive_domaint::disjunctt d_src=e.disjunct;
-    disjunctive_domaint::disjunctt d_sink;
+    disjunctive_domaint::disjunctt src=e.disjunct;
+    disjunctive_domaint::disjunctt sink;
     symbolic_patht p=e.path;
 
     tpolyhedra_domaint::templ_valuet *post=
       new tpolyhedra_domaint::templ_valuet(
-        *static_cast<tpolyhedra_domaint::templ_valuet *>(inv[d_src]));
+        *static_cast<tpolyhedra_domaint::templ_valuet *>(inv[src]));
     
     get_post(p,inv, post);
 
-    d_sink=disjunctive_domain.merge_heuristic(inv, *post);
+    sink=disjunctive_domain.merge_heuristic(inv, *post);
 
-    if (d_sink==inv.size())
+    if (sink==inv.size())
     {
-      add_new_replication(inv,d_sink,*post);
+      add_new_replication(inv,sink,*post);
     }
     else
     {
-      domain->join(*inv[d_sink],*post); // join value
+      domain->join(*inv[sink],*post); // join value
     }
-    add_edge(d_src,p,d_sink);
+    add_edge(src,p,sink);
     // TODO: create new template
   }
   else
@@ -415,16 +415,15 @@ Function: strategy_solver_disjunctivet::add_edge
 \*******************************************************************/
 
 void strategy_solver_disjunctivet::add_edge(
-  disjunctive_domaint::disjunctt d_src, 
+  disjunctive_domaint::disjunctt src, 
   const symbolic_patht &p,
-  disjunctive_domaint::disjunctt d_sink)
+  disjunctive_domaint::disjunctt sink)
 {
   debug() << "Adding new SSA nodes" << eom;
-  disjunctive_domaint::disjunctt _d_src,_d_sink;
-  symbolic_patht _p;
+
   local_SSAt::nodest::iterator n_it=loop->body_nodes.begin();
   std::string sink_suffix="_"+std::to_string(current_count);
-  std::string src_suffix="_"+std::to_string(d_src);
+  std::string src_suffix="_"+std::to_string(src);
   for (n_it++;n_it!=loop->body_nodes.end();n_it++)
   {
     if (n_it->equalities.empty() &&
@@ -452,10 +451,12 @@ void strategy_solver_disjunctivet::add_edge(
   }
 
   // add new edge to seen set
-  disjunctive_domaint::seen_edget new_edge(d_src,p,d_sink);
+  disjunctive_domaint::seen_edget new_edge(src,p,sink);
   disjunctive_domain.seen_set.push_back(new_edge);
 
   // add new template corresponding to new edge
+  debug() << "Adding new templates" << eom;
+  
   if (disjunctive_domain.template_kind==disjunctive_domaint::TPOLYHEDRA)
   {
     tpolyhedra_domaint *base_domain=static_cast<tpolyhedra_domaint *>(disjunctive_domain.base_domain());
@@ -506,7 +507,7 @@ void strategy_solver_disjunctivet::add_edge(
     }
     
     // domains are sorted by sink, then source
-    disjunctive_domain.templ[d_sink][d_src]=new_domain;
+    disjunctive_domain.templ[sink][src]=new_domain;
   }
   else
   {
