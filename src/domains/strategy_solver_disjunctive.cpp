@@ -85,33 +85,41 @@ disjunctive_domaint::unresolved_edget
 strategy_solver_disjunctivet::get_unresolved_edge(
   const disjunctive_domaint::disjunctive_valuet &value)
 {
-  disjunctive_domaint::unresolved_edget e;
+  disjunctive_domaint::unresolved_edget e(value.size(),symbolic_patht());
   for (auto it=disjunctive_domain.unresolved_set.begin(); 
        it!=disjunctive_domain.unresolved_set.end();)
   {
     solver.new_context();
-    disjunctive_domaint::disjunctt d;
-    symbolic_patht p;
-    d = it->disjunct;
-    p = it->path;
+    disjunctive_domaint::disjunctt d=it->disjunct;
+    symbolic_patht p=it->path;
 
-    solver<<disjunctive_domain.get_disjunct_constraint(d,*value[d]);
+    if (disjunctive_domain.template_kind==disjunctive_domaint::TPOLYHEDRA)
+    {
+      tpolyhedra_domaint *domain=static_cast<tpolyhedra_domaint *>(disjunctive_domain.base_domain());
+      tpolyhedra_domaint::templ_valuet *v=static_cast<tpolyhedra_domaint::templ_valuet *>(value[d]);
+      debug() << "Disjunct pre-constraint: " << eom;
+      debug() << from_expr(domain->to_pre_constraints(*v)) << eom << eom;
+      solver << domain->to_pre_constraints(*v);
+    }
+    debug() << "Path: " << from_expr(p.get_expr()) << eom;
     solver<<p.get_expr();
 
     if (solver()==decision_proceduret::D_SATISFIABLE)
     {
+      debug() << "Path is feasible" << eom << eom;      
       e=*it;
-      disjunctive_domain.unresolved_set.erase(it);
+      it=disjunctive_domain.unresolved_set.erase(it);
+      solver.pop_context();
+      break;
     }
     else
     {
+      debug() << "Path is infeasible" << eom << eom;
       it++;
+      solver.pop_context();
     }
-    solver.pop_context();
-    return e;
   }
-  // couldn't find a feasible edge
-  return disjunctive_domaint::unresolved_edget(value.size(),symbolic_patht());
+  return e;
 }
 
 /*******************************************************************\
