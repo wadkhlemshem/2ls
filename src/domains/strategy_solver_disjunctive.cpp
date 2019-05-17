@@ -416,7 +416,7 @@ Function: strategy_solver_disjunctivet::add_edge
 
 void strategy_solver_disjunctivet::add_edge(
   disjunctive_domaint::disjunctt src, 
-  const symbolic_patht &p,
+  const symbolic_patht &path,
   disjunctive_domaint::disjunctt sink)
 {
   debug() << "Adding new SSA nodes" << eom;
@@ -451,7 +451,7 @@ void strategy_solver_disjunctivet::add_edge(
   }
 
   // add new edge to seen set
-  disjunctive_domaint::seen_edget new_edge(src,p,sink);
+  disjunctive_domaint::seen_edget new_edge(src,path,sink);
   disjunctive_domain.seen_set.push_back(new_edge);
 
   // add new template corresponding to new edge
@@ -505,7 +505,18 @@ void strategy_solver_disjunctivet::add_edge(
       }
       new_domain->add_template_row(expr,pre_guard,post_guard,aux_expr,row.kind);
     }
-    
+
+    // restrict new domain to symbolic path
+    symbolic_patht path_;
+    for (auto p:path.path_map)
+    {
+      exprt guard=p.first;
+      rename(guard,src_suffix,sink_suffix);
+      std::cout << from_expr(guard) << std::endl;
+      path_.path_map[guard]=p.second;
+    }
+    new_domain->restrict_to_sympath(path_);
+
     // domains are sorted by sink, then source
     disjunctive_domain.templ[sink][src]=new_domain;
   }
@@ -513,6 +524,6 @@ void strategy_solver_disjunctivet::add_edge(
   {
     assert(false);
   }
-  
+
   current_count++;
 }
