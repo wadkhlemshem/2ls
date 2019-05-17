@@ -178,10 +178,10 @@ void strategy_solver_disjunctivet::get_post(
     strategy_solver_enumerationt strategy_solver(
       domain,solver,ns);
     domain.output_value(debug(),*post_inv,ns);
-    debug() << "-------------------------------------------------" << eom;
+    debug() << "-------------------------------------------------" << eom << eom;
     strategy_solver.iterate(*post_inv);
     domain.output_value(debug(),*post_inv,ns);
-    debug() << "--------------------------------------------------" << eom;
+    debug() << "--------------------------------------------------" << eom << eom;
     domain.undo_restriction();
   }
   else
