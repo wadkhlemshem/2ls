@@ -313,3 +313,37 @@ std::vector<irep_idt>::iterator
   }
   return it;
 }
+
+/*******************************************************************\
+
+Function: strategy_solver_disjunctivet::rename
+
+  Inputs:
+
+ Outputs:
+
+ Purpose:
+
+\*******************************************************************/
+
+void strategy_solver_disjunctivet::rename(
+  exprt &expr,
+  const std::string &suffix,
+  disjunctive_domaint::disjunctt d_src)
+{
+  if(expr.id()==ID_symbol ||
+     expr.id()==ID_nondet_symbol)
+  {
+    irep_idt id=expr.get(ID_identifier);
+    if (loop->find_loophead_object(id)!=loop->loophead_objects.end())
+    {
+      expr.set(ID_identifier,id2string(id)+"_"+std::to_string(d_src));
+    }
+    else
+    {
+      expr.set(ID_identifier,id2string(id)+suffix);
+    }
+  }
+  Forall_operands(it, expr)
+    rename(*it, suffix, d_src);
+}
