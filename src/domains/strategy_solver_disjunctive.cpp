@@ -58,13 +58,13 @@ bool strategy_solver_disjunctivet::iterate(
 
     disjunctive_domaint::disjunctt src=e.disjunct;
     disjunctive_domaint::disjunctt sink;
-    symbolic_patht p=e.path;
+    symbolic_patht path=e.path;
 
     tpolyhedra_domaint::templ_valuet *post=
       new tpolyhedra_domaint::templ_valuet(
         *static_cast<tpolyhedra_domaint::templ_valuet *>(inv[src]));
     
-    get_post(p,inv, post);
+    get_post(path,inv,post);
 
     sink=disjunctive_domain.merge_heuristic(inv, *post);
 
@@ -76,8 +76,7 @@ bool strategy_solver_disjunctivet::iterate(
     {
       domain->join(*inv[sink],*post); // join value
     }
-    add_edge(src,p,sink);
-    // TODO: create new template
+    add_edge(src,path,sink);
   }
   else
   {
@@ -512,7 +511,6 @@ void strategy_solver_disjunctivet::add_edge(
     {
       exprt guard=p.first;
       rename(guard,src_suffix,sink_suffix);
-      std::cout << from_expr(guard) << std::endl;
       path_.path_map[guard]=p.second;
     }
     new_domain->restrict_to_sympath(path_);
