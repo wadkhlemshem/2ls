@@ -450,5 +450,68 @@ void strategy_solver_disjunctivet::add_edge(
       rename(*f_it,src_suffix,sink_suffix);
     }
   }
+
+  // add new edge to seen set
+  disjunctive_domaint::seen_edget new_edge(d_src,p,d_sink);
+  disjunctive_domain.seen_set.push_back(new_edge);
+
+  // add new template corresponding to new edge
+  if (disjunctive_domain.template_kind==disjunctive_domaint::TPOLYHEDRA)
+  {
+    tpolyhedra_domaint *base_domain=static_cast<tpolyhedra_domaint *>(disjunctive_domain.base_domain());
+    replace_mapt new_renaming_map; // renaming map for new domain
+    replace_mapt map; // map from base domain exprts to new domain exprts
+    for (auto &x:disjunctive_domain.renaming_map)
+    {
+      exprt pre_var=x.first;
+      exprt post_var=x.second;
+      new_renaming_map[pre_var]=post_var; // keep old renaming map for non-LOOP vars
+      rename(pre_var,src_suffix,sink_suffix);
+      rename(post_var,src_suffix,sink_suffix);
+      new_renaming_map[pre_var]=post_var;
+      map[x.first]=pre_var;
+    }
+
+    tpolyhedra_domaint *new_domain=new tpolyhedra_domaint(disjunctive_domain.domain_number,new_renaming_map,ns);
+    
+    for (auto &row:base_domain->templ)
+    {
+      exprt pre_guard=row.pre_guard;
+      exprt aux_expr=row.aux_expr;
+      exprt post_guard=row.post_guard;
+      exprt expr=row.expr;
+      if (row.kind==tpolyhedra_domaint::kindt::LOOP)
+      {
+        if (map.find(row.pre_guard)==map.end())
+        {
+          rename(pre_guard,src_suffix,sink_suffix);
+          map[row.pre_guard]=pre_guard;
+        }
+        if (map.find(row.aux_expr)==map.end())
+        {
+          rename(aux_expr,src_suffix,sink_suffix);
+          map[row.aux_expr]=aux_expr;
+        }
+        if (map.find(row.post_guard)==map.end())
+        {
+          rename(post_guard,src_suffix,sink_suffix);
+          map[row.post_guard]=post_guard;
+        }
+        replace_expr(map,expr);
+        pre_guard=map[row.pre_guard];
+        post_guard=map[row.post_guard];
+        aux_expr=map[row.aux_expr];
+      }
+      new_domain->add_template_row(expr,pre_guard,post_guard,aux_expr,row.kind);
+    }
+    
+    // domains are sorted by sink, then source
+    disjunctive_domain.templ[d_sink][d_src]=new_domain;
+  }
+  else
+  {
+    assert(false);
+  }
+  
   current_count++;
 }
