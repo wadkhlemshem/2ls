@@ -34,11 +34,6 @@ public:
 
   virtual bool iterate(invariantt &inv);
 
-  disjunctive_domaint::unresolved_edget get_unresolved_edge(
-    const disjunctive_domaint::disjunctive_valuet &value);
-  invariantt get_post(
-    const disjunctive_domaint::unresolved_edget &e,
-    disjunctive_domaint::disjunctive_valuet &inv);
 
 protected:
   disjunctive_domaint &disjunctive_domain;
@@ -47,6 +42,11 @@ protected:
   std::vector<symbolic_patht> all_paths;
 
   void enumerate_all_paths(guardst &guards);
+  disjunctive_domaint::unresolved_edget get_unresolved_edge(
+    const disjunctive_domaint::disjunctive_valuet &value);
+  invariantt get_post(
+    const disjunctive_domaint::unresolved_edget &e,
+    disjunctive_domaint::disjunctive_valuet &inv);
 };
 
 #endif //CPROVER_2LS_DOMAINS_STRATEGY_SOLVER_DISJUNCTIVE_DOMAIN_H
