@@ -57,7 +57,6 @@ public:
 
   virtual bool iterate(invariantt &inv);
 
-
 protected:
   disjunctive_domaint &disjunctive_domain;
   local_SSAt &SSA;
@@ -86,7 +85,7 @@ protected:
   void add_loophead(disjunctive_domaint::disjunctt d);
   void add_edge(
     disjunctive_domaint::disjunctt d_src, 
-    symbolic_patht &p,
+    const symbolic_patht &p,
     disjunctive_domaint::disjunctt d_sink);
 };
 

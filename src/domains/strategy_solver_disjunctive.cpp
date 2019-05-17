@@ -416,7 +416,7 @@ Function: strategy_solver_disjunctivet::add_edge
 
 void strategy_solver_disjunctivet::add_edge(
   disjunctive_domaint::disjunctt d_src, 
-  symbolic_patht &p,
+  const symbolic_patht &p,
   disjunctive_domaint::disjunctt d_sink)
 {
   debug() << "Adding new SSA nodes" << eom;
