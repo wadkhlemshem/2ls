@@ -18,6 +18,7 @@ class strategy_solver_disjunctivet:public strategy_solver_baset
 {
 public:
   typedef std::vector<exprt> guardst;
+
   strategy_solver_disjunctivet(
     disjunctive_domaint &_disjunctive_domain,
     incremental_solvert &_solver,

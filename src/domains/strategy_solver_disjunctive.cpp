@@ -32,18 +32,21 @@ bool strategy_solver_disjunctivet::iterate(
 
   bool improved=false;
 
-  // initial strategy
-  if (inv.size()==0)
+  if (disjunctive_domain.template_kind==disjunctive_domaint::TPOLYHEDRA)
   {
-    if (disjunctive_domain.template_kind==disjunctive_domaint::TPOLYHEDRA)
+    tpolyhedra_domaint *domain=static_cast<tpolyhedra_domaint *>(disjunctive_domain.base_domain());
+
+    // initial strategy
+    if (inv.size()==0)
     {
       auto result=tpolyhedra_domaint::templ_valuet();
-      tpolyhedra_domaint *domain=static_cast<tpolyhedra_domaint *>(disjunctive_domain.base_domain());
       domain->initialize(result);
       strategy_solver_enumerationt strategy_solver(
         *domain,solver,ns);
       strategy_solver.iterate(result);
-      inv.push_back(new tpolyhedra_domaint::templ_valuet(static_cast<tpolyhedra_domaint::templ_valuet>(result)));
+      inv.push_back(
+        new tpolyhedra_domaint::templ_valuet(
+          static_cast<tpolyhedra_domaint::templ_valuet>(result)));
       
       for (auto path : all_paths)
       {
@@ -51,47 +54,44 @@ bool strategy_solver_disjunctivet::iterate(
         disjunctive_domain.unresolved_set.push_back(e);
       }
     }
+
+    disjunctive_domaint::unresolved_edget e=get_unresolved_edge(inv);
+    if (e.disjunct==inv.size())
+    {
+      // no more unresolved edges
+      return improved;
+    }
+
+    disjunctive_domaint::disjunctt d_src=e.disjunct;
+    disjunctive_domaint::disjunctt d_sink;
+    symbolic_patht p=e.path;
+
+    tpolyhedra_domaint::templ_valuet *post=
+      new tpolyhedra_domaint::templ_valuet(
+        *static_cast<tpolyhedra_domaint::templ_valuet *>(inv[d_src]));
+    
+    get_post(p,inv, post);
+
+    d_sink=disjunctive_domain.merge_heuristic(inv, *post);
+
+    if (d_sink==inv.size())
+    {
+      inv.push_back(
+        new tpolyhedra_domaint::templ_valuet(
+          *static_cast<tpolyhedra_domaint::templ_valuet *>(post)));
+    }
     else
     {
-      assert(false);
+      domain->join(*inv[d_sink],*post); // join value
+      // TODO: add loop body
     }
-  }
-
-  disjunctive_domaint::unresolved_edget e=get_unresolved_edge(inv);
-  if (e.disjunct==inv.size())
-  {
-    // no more unresolved edges
-    return improved;
-  }
-
-  disjunctive_domaint::disjunctt d_src=e.disjunct;
-  disjunctive_domaint::disjunctt d_sink;
-  symbolic_patht p=e.path;
-
-  invariantt *post=new tpolyhedra_domaint::templ_valuet(*static_cast<tpolyhedra_domaint::templ_valuet *>(inv[d_src]));
-  get_post(p,inv, post);
-
-  disjunctive_domaint::disjunctt d=disjunctive_domain.merge_heuristic(inv, *post);
-
-  if (d==inv.size())
-  {
-    if (disjunctive_domain.template_kind==disjunctive_domaint::TPOLYHEDRA)
-    {
-      inv.push_back(new tpolyhedra_domaint::templ_valuet(*static_cast<tpolyhedra_domaint::templ_valuet *>(post)));
-    }
-    // TODO: add loop head
+    // TODO: create new template
   }
   else
   {
-    d_sink=d;
-    if (disjunctive_domain.template_kind==disjunctive_domaint::TPOLYHEDRA)
-    {
-      tpolyhedra_domaint *domain=static_cast<tpolyhedra_domaint *>(disjunctive_domain.base_domain_ptr);
-      domain->join(*inv[d_sink],*post); // join value
-    }
-    // TODO: add loop body
+    // TODO: implement disjuntive strategy solver for other base domains
+    assert(false);
   }
-  // TODO: create new template
   
   return improved;
 }
