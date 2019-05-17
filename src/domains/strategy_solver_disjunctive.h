@@ -80,7 +80,9 @@ protected:
     const disjunctive_domaint::disjunctive_valuet &pre_inv,
     invariantt *post_inv);
   bool find_loop(local_SSAt::locationt &loophead_loc, loopt *loop);
-  void rename(exprt &expr, const std::string &suffix, disjunctive_domaint::disjunctt d_src);
+  void rename(exprt &expr,
+    const std::string &src_suffix,
+    const std::string &sink_suffix);
   void add_loophead(disjunctive_domaint::disjunctt d);
   void add_edge(
     disjunctive_domaint::disjunctt d_src, 

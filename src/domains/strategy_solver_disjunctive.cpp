@@ -357,8 +357,8 @@ Function: strategy_solver_disjunctivet::rename
 
 void strategy_solver_disjunctivet::rename(
   exprt &expr,
-  const std::string &suffix,
-  disjunctive_domaint::disjunctt d_src)
+  const std::string &src_suffix="",
+  const std::string &sink_suffix="")
 {
   if(expr.id()==ID_symbol ||
      expr.id()==ID_nondet_symbol)
@@ -366,15 +366,15 @@ void strategy_solver_disjunctivet::rename(
     irep_idt id=expr.get(ID_identifier);
     if (loop->find_loophead_object(id)!=loop->loophead_objects.end())
     {
-      expr.set(ID_identifier,id2string(id)+"_"+std::to_string(d_src));
+      expr.set(ID_identifier,id2string(id)+src_suffix);
     }
     else
     {
-      expr.set(ID_identifier,id2string(id)+suffix);
+      expr.set(ID_identifier,id2string(id)+sink_suffix);
     }
   }
   Forall_operands(it, expr)
-    rename(*it, suffix, d_src);
+    rename(*it,src_suffix,sink_suffix);
 }
 
 /*******************************************************************\
@@ -397,7 +397,7 @@ void strategy_solver_disjunctivet::add_loophead(
   local_SSAt::nodet &node=loopheads->back();
   for (auto &eq:node.equalities)
   {
-    rename(eq,"",d);
+    rename(eq,"_"+std::to_string(d),"");
     solver << eq;
   }
 }
@@ -423,7 +423,8 @@ void strategy_solver_disjunctivet::add_edge(
   disjunctive_domaint::disjunctt _d_src,_d_sink;
   symbolic_patht _p;
   local_SSAt::nodest::iterator n_it=loop->body_nodes.begin();
-  std::string suffix="_"+std::to_string(current_count);
+  std::string sink_suffix="_"+std::to_string(current_count);
+  std::string src_suffix="_"+std::to_string(d_src);
   for (n_it++;n_it!=loop->body_nodes.end();n_it++)
   {
     if (n_it->equalities.empty() &&
@@ -436,17 +437,17 @@ void strategy_solver_disjunctivet::add_edge(
     for (local_SSAt::nodet::equalitiest::iterator e_it=node.equalities.begin();
           e_it!=node.equalities.end();e_it++)
     {
-      rename(*e_it,suffix,d_src);
+      rename(*e_it,src_suffix,sink_suffix);
     }
     for (local_SSAt::nodet::constraintst::iterator c_it=node.constraints.begin();
           c_it!=node.constraints.end();c_it++)
     {
-      rename(*c_it,suffix,d_src);
+      rename(*c_it,src_suffix,sink_suffix);
     }
     for (local_SSAt::nodet::function_callst::iterator f_it=node.function_calls.begin();
           f_it!=node.function_calls.end();f_it)
     {
-      rename(*f_it,suffix,d_src);
+      rename(*f_it,src_suffix,sink_suffix);
     }
   }
   current_count++;
