@@ -67,10 +67,32 @@ bool strategy_solver_disjunctivet::iterate(
   disjunctive_domaint::disjunctt d_src=e.disjunct;
   disjunctive_domaint::disjunctt d_sink;
   symbolic_patht p=e.path;
-  
+
   invariantt *post=new tpolyhedra_domaint::templ_valuet(*static_cast<tpolyhedra_domaint::templ_valuet *>(inv[d_src]));
   get_post(p,inv, post);
 
+  disjunctive_domaint::disjunctt d=disjunctive_domain.merge_heuristic(inv, *post);
+
+  if (d==inv.size())
+  {
+    if (disjunctive_domain.template_kind==disjunctive_domaint::TPOLYHEDRA)
+    {
+      inv.push_back(new tpolyhedra_domaint::templ_valuet(*static_cast<tpolyhedra_domaint::templ_valuet *>(post)));
+    }
+    // TODO: add loop head
+  }
+  else
+  {
+    d_sink=d;
+    if (disjunctive_domain.template_kind==disjunctive_domaint::TPOLYHEDRA)
+    {
+      tpolyhedra_domaint *domain=static_cast<tpolyhedra_domaint *>(disjunctive_domain.base_domain_ptr);
+      domain->join(*inv[d_sink],*post); // join value
+    }
+    // TODO: add loop body
+  }
+  // TODO: create new template
+  
   return improved;
 }
 
