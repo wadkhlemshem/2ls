@@ -444,7 +444,7 @@ void strategy_solver_disjunctivet::add_edge(
       rename(*c_it,src_suffix,sink_suffix);
     }
     for (local_SSAt::nodet::function_callst::iterator f_it=node.function_calls.begin();
-          f_it!=node.function_calls.end();f_it)
+          f_it!=node.function_calls.end();f_it++)
     {
       rename(*f_it,src_suffix,sink_suffix);
     }
