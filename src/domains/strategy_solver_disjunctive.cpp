@@ -24,6 +24,9 @@ Function: strategy_solver_disjunctivet::iterate
 bool strategy_solver_disjunctivet::iterate(
   strategy_solver_baset::invariantt &_inv)
 {
+  // only iterate on loops for now
+  assert(template_generator.loop_present);
+
   disjunctive_domaint::disjunctive_valuet &inv=
     static_cast<disjunctive_domaint::disjunctive_valuet &>(_inv);
 
