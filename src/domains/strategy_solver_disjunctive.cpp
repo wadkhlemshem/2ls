@@ -63,6 +63,8 @@ bool strategy_solver_disjunctivet::iterate(
       return improved;
     }
 
+    improved=true; // found an unresolved edge
+
     disjunctive_domaint::disjunctt d_src=e.disjunct;
     disjunctive_domaint::disjunctt d_sink;
     symbolic_patht p=e.path;
