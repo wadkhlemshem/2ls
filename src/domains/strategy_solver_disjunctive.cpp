@@ -83,6 +83,11 @@ bool strategy_solver_disjunctivet::iterate(
         new tpolyhedra_domaint::templ_valuet(
           *static_cast<tpolyhedra_domaint::templ_valuet *>(post)));
       add_loophead(d_sink); // SSA loophead for new disjunct
+      for (auto path : all_paths)
+      {
+        disjunctive_domaint::unresolved_edget e(d_sink,path);
+        disjunctive_domain.unresolved_set.push_back(e);
+      }
     }
     else
     {
