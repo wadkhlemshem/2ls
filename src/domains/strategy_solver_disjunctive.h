@@ -69,6 +69,10 @@ protected:
   unsigned int current_count;
 
   void enumerate_all_paths(guardst &guards);
+  void add_new_replication(
+    disjunctive_domaint::disjunctive_valuet &inv,
+    const disjunctive_domaint::disjunctt d,
+    const invariantt &value);
   disjunctive_domaint::unresolved_edget get_unresolved_edge(
     const disjunctive_domaint::disjunctive_valuet &value);
   void get_post(

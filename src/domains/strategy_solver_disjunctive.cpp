@@ -39,21 +39,12 @@ bool strategy_solver_disjunctivet::iterate(
     // initial strategy
     if (inv.size()==0)
     {
-      auto result=tpolyhedra_domaint::templ_valuet();
+      tpolyhedra_domaint::templ_valuet result;
       domain->initialize(result);
       strategy_solver_enumerationt strategy_solver(
         *domain,solver,ns);
       strategy_solver.iterate(result);
-      inv.push_back(
-        new tpolyhedra_domaint::templ_valuet(
-          static_cast<tpolyhedra_domaint::templ_valuet>(result)));
-      add_loophead(0); // SSA loophead for first disjunct
-      
-      for (auto path : all_paths)
-      {
-        disjunctive_domaint::unresolved_edget e(0,path);
-        disjunctive_domain.unresolved_set.push_back(e);
-      }
+      add_new_replication(inv,0,result);
     }
 
     disjunctive_domaint::unresolved_edget e=get_unresolved_edge(inv);
@@ -79,15 +70,7 @@ bool strategy_solver_disjunctivet::iterate(
 
     if (d_sink==inv.size())
     {
-      inv.push_back(
-        new tpolyhedra_domaint::templ_valuet(
-          *static_cast<tpolyhedra_domaint::templ_valuet *>(post)));
-      add_loophead(d_sink); // SSA loophead for new disjunct
-      for (auto path : all_paths)
-      {
-        disjunctive_domaint::unresolved_edget e(d_sink,path);
-        disjunctive_domain.unresolved_set.push_back(e);
-      }
+      add_new_replication(inv,d_sink,*post);
     }
     else
     {
@@ -103,6 +86,43 @@ bool strategy_solver_disjunctivet::iterate(
   }
   
   return improved;
+}
+
+/*******************************************************************\
+
+Function: strategy_solver_disjunctivet::add_new_replication
+
+  Inputs:
+
+ Outputs:
+
+ Purpose:
+
+\*******************************************************************/
+
+void strategy_solver_disjunctivet::add_new_replication(
+  disjunctive_domaint::disjunctive_valuet &inv,
+  const disjunctive_domaint::disjunctt d,
+  const invariantt &value)
+{
+  if (disjunctive_domain.template_kind==disjunctive_domaint::TPOLYHEDRA)
+  {
+    inv.push_back(
+      new tpolyhedra_domaint::templ_valuet(
+        static_cast<const tpolyhedra_domaint::templ_valuet &>(value)));
+
+    add_loophead(d); // SSA loophead for new disjunct
+    
+    for (auto path : all_paths)
+    {
+      disjunctive_domaint::unresolved_edget e(d,path);
+      disjunctive_domain.unresolved_set.push_back(e);
+    }
+  }
+  else
+  {
+    assert(false);
+  }
 }
 
 /*******************************************************************\
