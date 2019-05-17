@@ -128,7 +128,19 @@ void disjunctive_domaint::output_domain(
   switch (template_kind)
   {
     case TPOLYHEDRA:
-      static_cast<tpolyhedra_domaint *>(base_domain_ptr)->output_domain(out,ns);
+      if (templ.size()==0)
+      {
+        static_cast<tpolyhedra_domaint *>(base_domain_ptr)->output_domain(out,ns);
+      }
+      for (auto &x:templ)
+      {
+        for (auto &y:x.second)
+        {
+          out << "Template for edge from disjunct " << y.first << " to disjunct " << x.first << std::endl;
+          static_cast<tpolyhedra_domaint *>(y.second)->output_domain(out,ns);
+          out << std::endl;
+        }
+      }
       break;
     default:
       assert(false);
