@@ -370,7 +370,7 @@ void strategy_solver_disjunctivet::add_loophead(
   local_SSAt::nodest::iterator n_it=loop->body_nodes.begin();
   loopheads->push_back(*n_it);
   local_SSAt::nodet &node=loopheads->back();
-  for (auto eq:node.equalities)
+  for (auto &eq:node.equalities)
   {
     rename(eq,"",d);
     solver << eq;
