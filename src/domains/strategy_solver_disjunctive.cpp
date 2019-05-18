@@ -441,11 +441,13 @@ void strategy_solver_disjunctivet::add_edge(
           e_it!=node.equalities.end();e_it++)
     {
       rename(*e_it,src_suffix,sink_suffix);
+      solver << *e_it;
     }
     for (local_SSAt::nodet::constraintst::iterator c_it=node.constraints.begin();
           c_it!=node.constraints.end();c_it++)
     {
       rename(*c_it,src_suffix,sink_suffix);
+      solver << *c_it;
     }
     for (local_SSAt::nodet::function_callst::iterator f_it=node.function_calls.begin();
           f_it!=node.function_calls.end();f_it++)
