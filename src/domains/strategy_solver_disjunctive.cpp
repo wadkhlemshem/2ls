@@ -454,6 +454,24 @@ void strategy_solver_disjunctivet::add_edge(
     }
   }
 
+  for (auto &node:*loopheads)
+  {
+    for (auto &eq:node.equalities)
+    {
+      debug() << "(E) " << from_expr(eq) << eom;
+    }
+    debug() << eom;
+  }
+  
+  for (auto &node:*loop_copies)
+  {
+    for (auto &eq:node.equalities)
+    {
+      debug() << "(E) " << from_expr(eq) << eom;
+    }
+    debug() << eom;
+  }
+
   // add new edge to seen set
   disjunctive_domaint::seen_edget new_edge(src,path,sink);
   disjunctive_domain.seen_set.push_back(new_edge);
@@ -522,6 +540,9 @@ void strategy_solver_disjunctivet::add_edge(
 
     // domains are sorted by sink, then source
     disjunctive_domain.templ[sink][src]=new_domain;
+
+    disjunctive_domain.output_domain(debug(),ns);
+    debug() << eom;
   }
   else
   {
