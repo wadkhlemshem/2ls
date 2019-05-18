@@ -281,6 +281,11 @@ bool strategy_solver_disjunctivet::find_loop(
   for (local_SSAt::nodet::equalitiest::iterator eq_it=node.equalities.begin();
     eq_it!=node.equalities.end();eq_it++)
   {
+    std::string id=id2string(eq_it->lhs().get(ID_identifier));
+    if (id.find("phi")!=id.npos)
+    {
+      eq_it->rhs()=eq_it->rhs().op1(); // remove loop select & init
+    }
     loop->add_loophead_objects(*eq_it);
   }
 
