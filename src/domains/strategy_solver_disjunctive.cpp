@@ -76,7 +76,10 @@ bool strategy_solver_disjunctivet::iterate(
     {
       domain->join(*inv[sink],*post); // join value
     }
-    add_edge(src,path,sink);
+
+    add_edge(src,path,sink); // add SSA nodes & new templates
+
+    while (iterate_binsearch(inv)) { }
   }
   else
   {
@@ -552,4 +555,84 @@ void strategy_solver_disjunctivet::add_edge(
   }
 
   current_count++;
+}
+
+/*******************************************************************\
+
+Function: strategy_solver_disjunctivet::iterate_binsearch
+
+  Inputs:
+
+ Outputs:
+
+ Purpose:
+
+\*******************************************************************/
+
+bool strategy_solver_disjunctivet::iterate_binsearch(
+  disjunctive_domaint::disjunctive_valuet &inv)
+{
+  // tpolyhedra_domaint::templ_valuet &inv=
+  //   static_cast<tpolyhedra_domaint::templ_valuet &>(_inv);
+
+  bool improved=false;
+
+  solver.new_context(); // for improvement check
+
+  exprt inv_expr=disjunctive_domain.to_pre_constraints(inv);
+
+#if 1
+  debug() << "improvement check: " << eom;
+  debug() << "pre-inv: " << from_expr(ns, "", inv_expr) << eom;
+#endif
+
+  solver << inv_expr;
+
+  disjunctive_domaint::disjunctive_exprst disjunctive_strategy_cond_exprs;
+  disjunctive_domain.make_not_post_constraints(
+    inv, disjunctive_strategy_cond_exprs, disjunctive_strategy_value_exprs);
+
+  // disjunctive_strategy_cond_literals.resize(disjunctive_strategy_cond_exprs.size());
+#if 1
+  debug() << "post-inv: ";
+#endif
+  exprt::operandst c;
+  for (auto &x:disjunctive_strategy_cond_exprs)
+  {
+    unsigned sink=x.first;
+    for (auto &y:x.second)
+    {
+      unsigned src=y.first;
+      
+      exprt::operandst &strategy_value_exprs=disjunctive_strategy_value_exprs[sink][src];
+      exprt::operandst &strategy_cond_exprs=y.second;
+      disjunctive_strategy_cond_literals[sink][src].resize(strategy_cond_exprs.size());
+      bvt &strategy_cond_literals=disjunctive_strategy_cond_literals[sink][src];
+      for (std::size_t i=0;i<strategy_cond_exprs.size();i++)
+      {
+#if 1
+        debug() << (i>0 ? " || " : "") << from_expr(ns, "", strategy_cond_exprs[i]);
+#endif
+        strategy_cond_literals[i]=solver.convert(strategy_cond_exprs[i]);
+        strategy_cond_exprs[i]=literal_exprt(strategy_cond_literals[i]);
+      }
+
+      c.push_back(disjunction(strategy_cond_exprs));
+    }
+  }
+  solver << disjunction(c);
+#if 1
+  debug() << eom;
+#endif
+
+#if 0
+  debug() << "solve(): ";
+#endif
+
+  if(solver()==decision_proceduret::D_SATISFIABLE) // improvement check
+  {}
+  else
+  {}
+
+  return improved;
 }

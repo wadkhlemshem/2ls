@@ -69,6 +69,10 @@ protected:
   unsigned int current_count;
   replace_mapt renaming_map; // renaming map for new domains
 
+  // handles on values to retrieve from model
+  disjunctive_domaint::disjunctive_literalst disjunctive_strategy_cond_literals;
+  disjunctive_domaint::disjunctive_exprst disjunctive_strategy_value_exprs;
+
   void enumerate_all_paths(guardst &guards);
   void add_new_replication(
     disjunctive_domaint::disjunctive_valuet &inv,
@@ -89,6 +93,7 @@ protected:
     disjunctive_domaint::disjunctt src, 
     const symbolic_patht &p,
     disjunctive_domaint::disjunctt sink);
+  bool iterate_binsearch(disjunctive_domaint::disjunctive_valuet &inv);
 };
 
 #endif //CPROVER_2LS_DOMAINS_STRATEGY_SOLVER_DISJUNCTIVE_DOMAIN_H
