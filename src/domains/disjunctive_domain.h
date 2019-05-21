@@ -33,6 +33,9 @@ public:
   typedef unsigned disjunctt;
   typedef std::map<disjunctt, std::map<disjunctt,domaint *>> templatet;
 
+  typedef std::map<disjunctt, std::map<disjunctt,exprt::operandst>> disjunctive_exprst;
+  typedef std::map<disjunctt, std::map<disjunctt,bvt>> disjunctive_literalst;
+
   class disjunctive_valuet:public valuet, public std::vector<valuet *>
   {
   };
@@ -188,7 +191,11 @@ public:
     const tpolyhedra_domaint::templ_valuet &value2);
   mp_integer distance(const constant_exprt &v1, const constant_exprt &v2);
 
-  exprt get_disjunct_constraint(const disjunctt &d, const valuet &value);
+  exprt to_pre_constraints(const disjunctive_valuet &value);
+  exprt make_not_post_constraints(
+    const disjunctive_valuet &value,
+    disjunctive_exprst &cond_exprs,
+    disjunctive_exprst &value_exprs);
 
 protected:
   domaint *base_domain_ptr;
