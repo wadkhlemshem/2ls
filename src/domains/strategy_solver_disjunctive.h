@@ -42,7 +42,8 @@ public:
     disjunctive_domain(_disjunctive_domain),
     SSA(_SSA),
     template_generator(_template_generator),
-    current_count(0)
+    current_count(0),
+    renaming_map(disjunctive_domain.renaming_map)
   {
     enumerate_all_paths(template_generator.guards);
 
@@ -66,6 +67,7 @@ protected:
   local_SSAt::nodest *loopheads;
   loopt *loop;
   unsigned int current_count;
+  replace_mapt renaming_map; // renaming map for new domains
 
   void enumerate_all_paths(guardst &guards);
   void add_new_replication(

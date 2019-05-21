@@ -484,21 +484,21 @@ void strategy_solver_disjunctivet::add_edge(
   if (disjunctive_domain.template_kind==disjunctive_domaint::TPOLYHEDRA)
   {
     tpolyhedra_domaint *base_domain=static_cast<tpolyhedra_domaint *>(disjunctive_domain.base_domain());
-    replace_mapt new_renaming_map; // renaming map for new domain
+    // replace_mapt new_renaming_map; // renaming map for new domain
     replace_mapt map; // map from base domain exprts to new domain exprts
     for (auto &x:disjunctive_domain.renaming_map)
     {
       exprt pre_var=x.first;
       exprt post_var=x.second;
-      new_renaming_map[pre_var]=post_var; // keep old renaming map for non-LOOP vars
+      renaming_map[pre_var]=post_var; // keep old renaming map for non-LOOP vars
       rename(pre_var,src_suffix,sink_suffix);
       rename(post_var,src_suffix,sink_suffix);
-      new_renaming_map[pre_var]=post_var;
+      renaming_map[pre_var]=post_var;
       map[x.first]=pre_var;
     }
 
-    tpolyhedra_domaint *new_domain=new tpolyhedra_domaint(disjunctive_domain.domain_number,new_renaming_map,ns);
-    
+    tpolyhedra_domaint *new_domain=new tpolyhedra_domaint(disjunctive_domain.domain_number,renaming_map,ns);
+
     for (auto &row:base_domain->templ)
     {
       exprt pre_guard=row.pre_guard;
