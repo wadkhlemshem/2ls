@@ -82,8 +82,8 @@ protected:
     const disjunctive_domaint::disjunctive_valuet &value);
   void get_post(
     const symbolic_patht &p,
-    const disjunctive_domaint::disjunctive_valuet &pre_inv,
-    invariantt *post_inv);
+    invariantt &pre_inv,
+    invariantt &post_inv);
   bool find_loop(local_SSAt::locationt &loophead_loc, loopt *loop);
   void rename(exprt &expr,
     const std::string &src_suffix,

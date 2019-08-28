@@ -60,11 +60,11 @@ bool strategy_solver_disjunctivet::iterate(
     disjunctive_domaint::disjunctt sink;
     symbolic_patht path=e.path;
 
-    tpolyhedra_domaint::templ_valuet *post=
-      new tpolyhedra_domaint::templ_valuet(
-        *static_cast<tpolyhedra_domaint::templ_valuet *>(inv[src]));
+    tpolyhedra_domaint::templ_valuet pre=*static_cast<tpolyhedra_domaint::templ_valuet *>(inv[src]);
+    tpolyhedra_domaint::templ_valuet *post=new tpolyhedra_domaint::templ_valuet();
+    domain->initialize(*post);
     
-    get_post(path,inv,post);
+    get_post(path,pre,*post);
 
     sink=disjunctive_domain.merge_heuristic(inv, *post);
 
@@ -79,7 +79,7 @@ bool strategy_solver_disjunctivet::iterate(
 
     add_edge(src,path,sink); // add SSA nodes & new templates
 
-    while (iterate_binsearch(inv)) { }
+    // while (iterate_binsearch(inv)) { }
   }
   else
   {
@@ -194,8 +194,8 @@ Function: strategy_solver_disjunctivet::get_post
 
 void strategy_solver_disjunctivet::get_post(
   const symbolic_patht &p,
-  const disjunctive_domaint::disjunctive_valuet &pre_inv,
-  invariantt *post_inv)
+  invariantt &_pre_inv,
+  invariantt &_post_inv)
 {
   debug() << "Computing post" << eom;
   domaint *_domain=disjunctive_domain.base_domain();
@@ -203,13 +203,157 @@ void strategy_solver_disjunctivet::get_post(
   if (disjunctive_domain.get_template_kind()==disjunctive_domaint::TPOLYHEDRA)
   {
     tpolyhedra_domaint domain(*static_cast<tpolyhedra_domaint *>(_domain));
+    tpolyhedra_domaint::templ_valuet &pre_inv=
+      static_cast<tpolyhedra_domaint::templ_valuet &>(_pre_inv);
+    tpolyhedra_domaint::templ_valuet &post_inv=
+      static_cast<tpolyhedra_domaint::templ_valuet &>(_post_inv);
     domain.restrict_to_sympath(p);
-    strategy_solver_enumerationt strategy_solver(
-      domain,solver,ns);
-    domain.output_value(debug(),*post_inv,ns);
+
+
+    domain.output_value(debug(),post_inv,ns);
     debug() << "-------------------------------------------------" << eom << eom;
-    strategy_solver.iterate(*post_inv);
-    domain.output_value(debug(),*post_inv,ns);
+    // strategy solver enumeration
+    solver.new_context();
+
+    std::cout << "Setting the loop select guard to true" << std::endl;
+    // std::cout << "pre guard: " << from_expr(domain.templ.begin()->pre_guard.op1()) << std::endl;
+    solver << domain.templ.begin()->pre_guard.op1();
+
+    exprt preinv_expr=domain.to_pre_constraints(pre_inv);
+  #ifdef DEBUG_OUTPUT
+    debug() << "pre-inv: " << from_expr(ns, "", preinv_expr) << eom;
+  #endif
+
+    solver << preinv_expr;
+
+    exprt::operandst strategy_cond_exprs;
+    domain.make_not_post_constraints(
+      post_inv, strategy_cond_exprs, strategy_value_exprs);
+
+    strategy_cond_literals.resize(strategy_cond_exprs.size());
+
+    exprt postinv_expr=disjunction(strategy_cond_exprs);
+
+  #ifdef DEBUG_OUTPUT
+    debug() << "post-inv: ";
+  #endif
+    for(std::size_t i=0; i<strategy_cond_exprs.size(); ++i)
+    {
+  #ifdef DEBUG_OUTPUT
+      debug() << (i>0 ? " || " : "") << from_expr(ns, "", strategy_cond_exprs[i]);
+  #endif
+
+      strategy_cond_literals[i]=solver.convert(strategy_cond_exprs[i]);
+      strategy_cond_exprs[i]=literal_exprt(strategy_cond_literals[i]);
+    }
+  #ifdef DEBUG_OUTPUT
+    debug() << eom;
+  #endif
+
+    solver << disjunction(strategy_cond_exprs);
+
+  #ifdef DEBUG_OUTPUT
+    debug() << "solve(): ";
+  #endif
+
+    if(solver()==decision_proceduret::D_SATISFIABLE)
+    {
+  #ifdef DEBUG_OUTPUT
+      debug() << "SAT" << eom;
+  #endif
+
+  #ifdef DEBUG_OUTPUT
+      for(std::size_t i=0; i<solver.activation_literals.size(); ++i)
+      {
+        debug() << "literal: " << solver.activation_literals[i] << " "
+                << solver.l_get(solver.activation_literals[i]) << eom;
+      }
+      for(std::size_t i=0; i<solver.formula.size(); ++i)
+      {
+        debug() << "literal: " << solver.formula[i] << " "
+                << solver.l_get(solver.formula[i]) << eom;
+      }
+      for(std::size_t i=0; i<tpolyhedra_domain.template_size(); ++i)
+      {
+        exprt c=tpolyhedra_domain.get_row_constraint(i, inv[i]);
+        debug() << "cond: " << from_expr(ns, "", c) << " "
+                << from_expr(ns, "", solver.get(c)) << eom;
+        debug() << "guards: "
+                << from_expr(ns, "", tpolyhedra_domain.templ[i].pre_guard)
+                << " " << from_expr(
+                  ns, "", solver.get(tpolyhedra_domain.templ[i].pre_guard))
+                << eom;
+        debug() << "guards: "
+                << from_expr(ns, "", tpolyhedra_domain.templ[i].post_guard) << " "
+                << from_expr(
+                  ns, "", solver.get(tpolyhedra_domain.templ[i].post_guard))
+                << eom;
+      }
+
+      {
+        std::set<symbol_exprt> vars;
+        find_symbols(preinv_expr, vars);
+
+        for(const auto &var : vars)
+        {
+          debug() << "var: " << from_expr(ns, "", var) << "="
+                  << from_expr(ns, "", solver.get(var)) << eom;
+        }
+      }
+      for(std::size_t i=0; i<tpolyhedra_domain.template_size(); ++i)
+      {
+        std::set<symbol_exprt> vars;
+        find_symbols(strategy_value_exprs[i], vars);
+
+        for(const auto &var : vars)
+        {
+          debug() << "var: " << from_expr(ns, "", var) << "="
+                  << from_expr(ns, "", solver.get(var)) << eom;
+        }
+      }
+  #endif
+
+      for(std::size_t row=0; row<strategy_cond_literals.size(); ++row)
+      {
+        if(solver.l_get(strategy_cond_literals[row]).is_true())
+        {
+          debug() << "updating row: " << row << eom;
+
+          exprt value=solver.get(strategy_value_exprs[row]);
+          tpolyhedra_domaint::row_valuet v=simplify_const(value);
+
+          debug() << "raw value; " << from_expr(ns, "", value)
+                  << ", simplified value: " << from_expr(ns, "", v) << eom;
+
+          domain.set_row_value(row, v, post_inv);
+        }
+      }
+    }
+    else
+    {
+  #ifdef DEBUG_OUTPUT
+      debug() << "UNSAT" << eom;
+  #endif
+
+  #ifdef DEBUG_OUTPUT
+      for(std::size_t i=0; i<solver.formula.size(); ++i)
+      {
+        if(solver.solver->is_in_conflict(solver.formula[i]))
+          debug() << "is_in_conflict: " << solver.formula[i] << eom;
+        else
+          debug() << "not_in_conflict: " << solver.formula[i] << eom;
+      }
+  #endif
+    }
+    solver.pop_context();
+
+
+    // strategy_solver_enumerationt strategy_solver(
+    //   domain,solver,ns);
+    // strategy_solver.iterate(post_inv);
+
+
+    domain.output_value(debug(),post_inv,ns);
     debug() << "--------------------------------------------------" << eom << eom;
     domain.undo_restriction();
   }
