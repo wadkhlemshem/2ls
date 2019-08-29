@@ -79,7 +79,7 @@ bool strategy_solver_disjunctivet::iterate(
 
     add_edge(src,path,sink); // add SSA nodes & new templates
 
-    // while (iterate_binsearch(inv)) { }
+    while (iterate_binsearch(inv)) { }
   }
   else
   {
