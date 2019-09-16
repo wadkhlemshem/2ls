@@ -220,6 +220,9 @@ disjunctive_domaint::disjunctt disjunctive_domaint::merge_heuristic(disjunctive_
         min_disjunct=d;
       }
     }
+    std::cout << "min distance: " << min_distance.distance << " " << min_distance.incomparable << std::endl;
+    std::cout << "tol: " << tol.distance << " " << tol.incomparable << std::endl;
+    std::cout << "min distance > tol: " << (min_distance>tol) << std::endl;
     if (dv.size()<max &&
         min_distance>tol)
     {
@@ -381,25 +384,26 @@ Function: disjunctive_domaint::to_pre_constraints
 
 \*******************************************************************/
 
-exprt disjunctive_domaint::to_pre_constraints(
-  const disjunctive_domaint::disjunctive_valuet &value)
-{
-  exprt::operandst c;
+// exprt disjunctive_domaint::to_pre_constraints(
+//   const disjunctive_domaint::disjunctive_valuet &value)
+// {
+//   exprt::operandst c;
 
-  for (auto &x:templ)
-  {
-    for (auto &y:x.second)
-    {
-      assert(value.size()>y.first);
-      if (template_kind==TPOLYHEDRA)
-      {
-        tpolyhedra_domaint::templ_valuet *v=static_cast<tpolyhedra_domaint::templ_valuet *>(value[y.first]);
-        c.push_back(static_cast<tpolyhedra_domaint *>(y.second)->to_pre_constraints(*v));
-      }
-    }
-  }
-  return conjunction(c);
-}
+//   std::cout << templ.size() << std::endl;
+//   for (auto &x:templ)
+//   {
+//     for (auto &y:x.second)
+//     {
+//       assert(value.size()>y.first);
+//       if (template_kind==TPOLYHEDRA)
+//       {
+//         tpolyhedra_domaint::templ_valuet *v=static_cast<tpolyhedra_domaint::templ_valuet *>(value[y.first]);
+//         c.push_back(static_cast<tpolyhedra_domaint *>(y.second)->to_pre_constraints(*v));
+//       }
+//     }
+//   }
+//   return conjunction(c);
+// }
 
 /*******************************************************************\
 
@@ -413,34 +417,34 @@ Function: disjunctive_domaint::make_not_post_constraints
 
 \*******************************************************************/
 
-exprt disjunctive_domaint::make_not_post_constraints(
-  const disjunctive_domaint::disjunctive_valuet &value,
-  disjunctive_domaint::disjunctive_exprst &disjunctive_cond_exprs,
-  disjunctive_domaint::disjunctive_exprst &disjunctive_value_exprs)
-{
-  exprt::operandst c;
+// exprt disjunctive_domaint::make_not_post_constraints(
+//   const disjunctive_domaint::disjunctive_valuet &value,
+//   disjunctive_domaint::disjunctive_exprst &disjunctive_cond_exprs,
+//   disjunctive_domaint::disjunctive_exprst &disjunctive_value_exprs)
+// {
+//   exprt::operandst c;
 
-  for (auto &x:templ)
-  {
-    assert(value.size()>x.first);
-    unsigned sink=x.first;
-    std::map <unsigned,exprt::operandst> value_exprs_map;
-    std::map <unsigned,exprt::operandst> cond_exprs_map;
-    for (auto &y:x.second)
-    {
-      unsigned src=y.first;
-      exprt::operandst cond_exprs;
-      exprt::operandst value_exprs;
-      if (template_kind==TPOLYHEDRA)
-      {
-        tpolyhedra_domaint::templ_valuet *v=static_cast<tpolyhedra_domaint::templ_valuet *>(value[x.first]);
-        tpolyhedra_domaint *domain=static_cast<tpolyhedra_domaint *>(y.second);
-        domain->make_not_post_constraints(*v,cond_exprs,value_exprs);
-        value_exprs_map.insert(std::make_pair(src,value_exprs));
-        cond_exprs_map.insert(std::make_pair(src,cond_exprs));
-      }
-    }
-    disjunctive_cond_exprs.insert(std::make_pair(sink,cond_exprs_map));
-    disjunctive_value_exprs.insert(std::make_pair(sink,value_exprs_map));
-  }
-}
+//   for (auto &x:templ)
+//   {
+//     assert(value.size()>x.first);
+//     unsigned sink=x.first;
+//     std::map <unsigned,exprt::operandst> value_exprs_map;
+//     std::map <unsigned,exprt::operandst> cond_exprs_map;
+//     for (auto &y:x.second)
+//     {
+//       unsigned src=y.first;
+//       exprt::operandst cond_exprs;
+//       exprt::operandst value_exprs;
+//       if (template_kind==TPOLYHEDRA)
+//       {
+//         tpolyhedra_domaint::templ_valuet *v=static_cast<tpolyhedra_domaint::templ_valuet *>(value[x.first]);
+//         tpolyhedra_domaint *domain=static_cast<tpolyhedra_domaint *>(y.second);
+//         domain->make_not_post_constraints(*v,cond_exprs,value_exprs);
+//         value_exprs_map.insert(std::make_pair(src,value_exprs));
+//         cond_exprs_map.insert(std::make_pair(src,cond_exprs));
+//       }
+//     }
+//     disjunctive_cond_exprs.insert(std::make_pair(sink,cond_exprs_map));
+//     disjunctive_value_exprs.insert(std::make_pair(sink,value_exprs_map));
+//   }
+// }

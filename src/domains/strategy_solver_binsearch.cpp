@@ -133,8 +133,11 @@ bool strategy_solver_binsearcht::iterate(invariantt &_inv)
 
     solver << pre_inv_expr;
 
+    debug () << "symb pre constraint: " << from_expr(pre_inv_expr) << eom;
+
     exprt post_inv_expr=tpolyhedra_domain.get_row_symb_post_constraint(row);
 
+    debug () << "symb post constraint: " << from_expr(post_inv_expr) << eom;
     solver << post_inv_expr;
 
 #if 0

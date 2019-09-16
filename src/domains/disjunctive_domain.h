@@ -119,7 +119,8 @@ public:
     {}
   };
   
-  typedef std::vector<seen_edget> seen_sett;
+  // typedef std::vector<exprt> guardst;
+  typedef std::map<disjunctt,std::map<disjunctt,symbolic_patht>> seen_sett;
 
   disjunctive_domaint(
     unsigned int _domain_number,
@@ -191,11 +192,11 @@ public:
     const tpolyhedra_domaint::templ_valuet &value2);
   mp_integer distance(const constant_exprt &v1, const constant_exprt &v2);
 
-  exprt to_pre_constraints(const disjunctive_valuet &value);
-  exprt make_not_post_constraints(
-    const disjunctive_valuet &value,
-    disjunctive_exprst &cond_exprs,
-    disjunctive_exprst &value_exprs);
+  // exprt to_pre_constraints(const disjunctive_valuet &value);
+  // exprt make_not_post_constraints(
+  //   const disjunctive_valuet &value,
+  //   disjunctive_exprst &cond_exprs,
+  //   disjunctive_exprst &value_exprs);
 
 protected:
   domaint *base_domain_ptr;

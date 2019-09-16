@@ -51,7 +51,7 @@ class optionst;
   "(disjunctive-intervals)" \
   "(disjunctive-zones)" \
   "(disjunctive-octagons)" \
-  "(disjunct-limit)" \
+  "(disjunct-limit):" \
   "(enum-solver)(binsearch-solver)(arrays)"\
   "(string-abstraction)(no-arch)(arch):(floatbv)(fixedbv)" \
   "(round-to-nearest)(round-to-plus-inf)(round-to-minus-inf)(round-to-zero)" \

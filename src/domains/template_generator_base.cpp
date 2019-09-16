@@ -826,9 +826,9 @@ void template_generator_baset::instantiate_standard_domains(
   {
     filter_template_domain();
     disjunctive_domaint::template_kindt template_kind=disjunctive_domaint::TPOLYHEDRA;
-    disjunctive_domaint::lex_metrict tol(0,mp_integer(0));
+    disjunctive_domaint::lex_metrict tol(0, mp_integer(2));
     unsigned int max=options.get_unsigned_int_option("disjunct-limit");
-    max = 51;
+    max = 2;
     std::cout << "Using a maximum of " << max << " disjuncts" << std::endl;
     domain_ptr=new disjunctive_domaint(
       domain_number,renaming_map,var_specs,SSA.ns,template_kind,max,tol);
