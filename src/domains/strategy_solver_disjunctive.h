@@ -34,36 +34,13 @@ public:
 
   typedef std::vector<exprt> guardst;
 
-  struct improvement_rowt
-  {
-    unsigned disjunct;
-    unsigned row;
+  typedef std::pair<unsigned,unsigned> improvement_rowt;
 
-    improvement_rowt(unsigned _disjunct, unsigned _row):
-      disjunct(_disjunct), row(_row)
-    {}
+  typedef std::map<improvement_rowt, improvement_rowt> strategyt;
 
-    friend bool operator==(
-      const improvement_rowt &r1,
-      const improvement_rowt &r2)
-    {
-      return (r1.disjunct==r2.disjunct) && (r1.row==r2.row);
-    }
-  };
+  typedef std::pair<improvement_rowt, constant_exprt> improvementt;
 
-  // struct improve_patht
-  // {
-  //   std::vector<improve_rowt> path;
-  //   bool is_cycle;
-
-  //   improve_patht():
-  //     path(), is_cycle(false)
-  //   {}
-  // };
-
-  // typedef std::vector<improve_patht> improve_pathst;
-
-  typedef std::map<improvement_rowt, std::vector<improvement_rowt>> improvement_grapht;
+  typedef tpolyhedra_domaint::templ_valuet tpolyhedra_valuet;
 
   strategy_solver_disjunctivet(
     disjunctive_domaint &_disjunctive_domain,
@@ -78,20 +55,27 @@ public:
     template_generator(_template_generator),
     current_count(0),
     renaming_map(disjunctive_domain.renaming_map),
-    last_improved(),
-    // improve_paths(),
-    improve_rows(),
-    improvement_graph()
+    loopheads(),
+    last_improved()
   {
-    // enumerate_all_paths(guards);
-
     assert(template_generator.loop_present);
 
     loop=new loopt();
     assert(find_loop(template_generator.loophead_loc,loop));
 
     loop_copies=new local_SSAt::nodest();
-    loopheads=new local_SSAt::nodest();
+  }
+
+  ~strategy_solver_disjunctivet()
+  {
+    if (loop!=NULL)
+    {
+      delete loop;
+    }
+    if (loop_copies!=NULL)
+    {
+      delete loop_copies;
+    }
   }
 
   virtual bool iterate(invariantt &inv);
@@ -101,34 +85,29 @@ protected:
   local_SSAt &SSA;
   template_generator_baset &template_generator;
   guardst guards;
-  std::vector<symbolic_patht> all_paths;
   local_SSAt::nodest *loop_copies;
-  local_SSAt::nodest *loopheads;
+  std::vector<local_SSAt::nodet> loopheads;
   loopt *loop;
   unsigned int current_count;
   replace_mapt renaming_map; // renaming map for new domains
   unsigned sum_bound_counter;
-  std::stack<improvement_rowt> last_improved;
-  // improve_pathst improve_paths;
-  improvement_grapht improvement_graph;
-  std::vector<improvement_rowt> improve_rows;
+  std::stack<improvementt> last_improved;
 
   // handles on values to retrieve from model
-  disjunctive_domaint::disjunctive_literalst strategy_post_cond_literals;
-  disjunctive_domaint::disjunctive_exprst strategy_post_cond_exprs;
-  std::map<unsigned, bvt> strategy_pre_cond_literals;
-  std::map<unsigned, exprt::operandst> strategy_pre_cond_exprs;
-  disjunctive_domaint::disjunctive_exprst strategy_value_exprs;
+  // disjunctive_domaint::disjunctive_literalst strategy_post_cond_literals;
+  // disjunctive_domaint::disjunctive_exprst strategy_post_cond_exprs;
+  // std::map<unsigned, bvt> strategy_pre_cond_literals;
+  // std::map<unsigned, exprt::operandst> strategy_pre_cond_exprs;
+  // disjunctive_domaint::disjunctive_exprst strategy_value_exprs;
 
-  void enumerate_all_paths(guardst &guards);
   void add_new_replication(
     disjunctive_domaint::disjunctive_valuet &inv,
     const disjunctive_domaint::disjunctt d,
     const invariantt &value);
   disjunctive_domaint::unresolved_edget get_unresolved_edge(
-    const disjunctive_domaint::disjunctive_valuet &value);
+    disjunctive_domaint::disjunctive_valuet &value);
   void get_post(
-    const symbolic_patht &p,
+    const symbolic_patht &path,
     invariantt &pre_inv,
     invariantt &post_inv);
   bool find_loop(local_SSAt::locationt &loophead_loc, loopt *loop);
@@ -137,22 +116,39 @@ protected:
     const std::string &sink_suffix);
   void add_loophead(disjunctive_domaint::disjunctt d);
   void add_edge(
-    disjunctive_domaint::disjunctt src, 
-    const symbolic_patht &p,
-    disjunctive_domaint::disjunctt sink);
-  bool iterate_binsearch(disjunctive_domaint::disjunctive_valuet &inv);
-  bool find_improvement(disjunctive_domaint::disjunctive_valuet &inv);
+    const disjunctive_domaint::disjunctt &src, 
+    const symbolic_patht &path,
+    const disjunctive_domaint::disjunctt &sink);
+  void compute_fixpoint(disjunctive_domaint::disjunctive_valuet &inv,
+    strategyt strategy);
+  bool find_strategy(
+    const disjunctive_domaint::disjunctive_valuet &inv,
+    strategyt &strategy);
   bool find_improving_row(
-    const improvement_rowt &from,
-    improvement_rowt &to);
-  void improve_row(
+    const disjunctive_domaint::disjunctive_valuet &inv,
+    const improvementt &improvement,
+    strategyt &strategy);
+  void improve_edge(
     disjunctive_domaint::disjunctive_valuet &inv,
-    const strategy_solver_disjunctivet::improvement_rowt &to,
-    const constant_exprt &value);
-  // void add_to_improve_paths(
-  //   const improve_rowt &src,
-  //   const improve_rowt &sink);
-  // improve_pathst::iterator find_path(const improve_rowt &row);
+    const strategy_solver_disjunctivet::improvement_rowt &from,
+    const strategy_solver_disjunctivet::improvement_rowt &to);
+  void join(
+    disjunctive_domaint::disjunctive_valuet &inv,
+    const unsigned disjunct,
+    const tpolyhedra_valuet &value);
+  bool improve_row(
+    disjunctive_domaint::disjunctive_valuet &inv,
+    const unsigned disjunct,
+    const unsigned row,
+    const constant_exprt &row_value);
+
+  void binsearch(
+    tpolyhedra_domaint *domain, 
+    const symbol_exprt &symb_value, 
+    constant_exprt &lower, 
+    constant_exprt &upper);
+  
+  void print_all();
   void print_model(const exprt &expr);
 };
 

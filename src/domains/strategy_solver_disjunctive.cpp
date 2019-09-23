@@ -11,6 +11,12 @@ Author: Johanan Wahlang
 
 #define SUM_BOUND_VAR "sum_bound#"
 
+#define tpolyhedra_value(value) \
+  static_cast<tpolyhedra_valuet &>(value)
+
+#define tpolyhedra_domain(domain) \
+  static_cast<tpolyhedra_domaint *>(domain)
+
 /*******************************************************************\
 
 Function: strategy_solver_disjunctivet::iterate
@@ -36,17 +42,21 @@ bool strategy_solver_disjunctivet::iterate(
 
   if (disjunctive_domain.template_kind==disjunctive_domaint::TPOLYHEDRA)
   {
-    tpolyhedra_domaint *domain=static_cast<tpolyhedra_domaint *>(disjunctive_domain.base_domain());
+    tpolyhedra_domaint *domain=tpolyhedra_domain(disjunctive_domain.base_domain());
 
     // initial strategy
     if (inv.size()==0)
     {
-      tpolyhedra_domaint::templ_valuet result;
+      tpolyhedra_valuet result;
       domain->initialize(result);
       strategy_solver_enumerationt strategy_solver(
         *domain,solver,ns);
       strategy_solver.iterate(result);
+      debug() << "Initial value: " << eom;
+      domain->output_value(debug(),result,ns);
+      debug() << eom;
       add_new_replication(inv,0,result);
+      domain->clear_aux_symbols(); // if std-invariants was true
     }
 
     disjunctive_domaint::unresolved_edget e=get_unresolved_edge(inv);
@@ -60,28 +70,44 @@ bool strategy_solver_disjunctivet::iterate(
 
     disjunctive_domaint::disjunctt src=e.disjunct;
     disjunctive_domaint::disjunctt sink;
-    symbolic_patht path=e.path;
+    const symbolic_patht &path=e.path;
 
-    tpolyhedra_domaint::templ_valuet pre=*static_cast<tpolyhedra_domaint::templ_valuet *>(inv[src]);
-    tpolyhedra_domaint::templ_valuet *post=new tpolyhedra_domaint::templ_valuet();
-    domain->initialize(*post);
+    tpolyhedra_valuet &pre=tpolyhedra_value(*inv[src]);
+    tpolyhedra_valuet post;
+    domain->initialize(post);
     
-    get_post(path,pre,*post);
+    get_post(path,pre,post);
 
-    sink=disjunctive_domain.merge_heuristic(inv, *post);
+    sink=disjunctive_domain.merge_heuristic(inv, post);
 
     if (sink==inv.size())
     {
-      add_new_replication(inv,sink,*post);
+      add_new_replication(inv,sink,post);
+      for (unsigned row=0;row<post.size();row++)
+      {
+        last_improved.push(improvementt(improvement_rowt(sink,row), false_exprt()));
+      }
     }
     else
     {
-      domain->join(*inv[sink],*post); // join value
+      join(inv,sink,post); // join value
     }
 
     add_edge(src,path,sink); // add SSA nodes & new templates
 
-    while (iterate_binsearch(inv)) { }
+    strategyt cur_strategy, old_strategy;
+    while(find_strategy(inv,cur_strategy))
+    {
+      for (const auto &[sink, src] : old_strategy)
+      {
+        if (cur_strategy.find(sink)!=cur_strategy.end())
+        {
+          cur_strategy[sink]=src;
+        }
+      }
+      compute_fixpoint(inv,cur_strategy);
+      old_strategy=cur_strategy;
+    }
   }
   else
   {
@@ -113,16 +139,9 @@ void strategy_solver_disjunctivet::add_new_replication(
   if (disjunctive_domain.template_kind==disjunctive_domaint::TPOLYHEDRA)
   {
     inv.push_back(
-      new tpolyhedra_domaint::templ_valuet(
-        static_cast<const tpolyhedra_domaint::templ_valuet &>(value)));
+      new tpolyhedra_valuet(static_cast<const tpolyhedra_valuet &>(value)));
 
     add_loophead(d); // SSA loophead for new disjunct
-    
-    // for (auto path : all_paths)
-    // {
-    //   disjunctive_domaint::unresolved_edget e(d,path);
-    //   disjunctive_domain.unresolved_set.push_back(e);
-    // }
   }
   else
   {
@@ -144,87 +163,33 @@ Function: strategy_solver_disjunctivet::get_unresolved_edge
 
 disjunctive_domaint::unresolved_edget
 strategy_solver_disjunctivet::get_unresolved_edge(
-  const disjunctive_domaint::disjunctive_valuet &value)
+  disjunctive_domaint::disjunctive_valuet &value)
 {
   disjunctive_domaint::unresolved_edget e(value.size(),symbolic_patht());
-  // for (auto it=disjunctive_domain.unresolved_set.begin(); 
-  //      it!=disjunctive_domain.unresolved_set.end();)
-  // {
-  //   solver.new_context();
-  //   disjunctive_domaint::disjunctt d=it->disjunct;
-  //   symbolic_patht p=it->path;
-
-  //   if (disjunctive_domain.template_kind==disjunctive_domaint::TPOLYHEDRA)
-  //   {
-  //     tpolyhedra_domaint *domain=static_cast<tpolyhedra_domaint *>(disjunctive_domain.base_domain());
-  //     tpolyhedra_domaint::templ_valuet *v=static_cast<tpolyhedra_domaint::templ_valuet *>(value[d]);
-  //     debug() << "Disjunct pre-constraint: " << eom;
-  //     debug() << from_expr(domain->to_pre_constraints(*v)) << eom << eom;
-  //     solver << domain->to_pre_constraints(*v);
-  //     if (solver()==decision_proceduret::D_SATISFIABLE)
-  //     {
-  //       debug() << "model: " << eom;
-  //       for (auto &guard:guards)
-  //       {
-  //         debug() << from_expr(guard) << " " << from_expr(solver.get(guard)) << eom;
-  //       }
-  //     }
-  //   }
-  //   debug() << "Path: " << from_expr(p.get_expr()) << eom;
-  //   solver<<p.get_expr();
-
-  //   if (solver()==decision_proceduret::D_SATISFIABLE)
-  //   {
-  //     debug() << "Path is feasible" << eom << eom;      
-  //     e=*it;
-  //     it=disjunctive_domain.unresolved_set.erase(it);
-  //     solver.pop_context();
-  //     if (disjunctive_domain.seen_set.find(e.disjunct)==disjunctive_domain.seen_set.end())
-  //     {
-  //       std::vector<symbolic_patht> v;
-  //       v.push_back(e.path);
-  //       std::pair<unsigned int,std::vector<symbolic_patht>> p(e.disjunct,v);
-        
-  //       disjunctive_domain.seen_set.insert(p);
-  //     }
-  //     else
-  //     {
-  //       disjunctive_domain.seen_set[e.disjunct].push_back(e.path);
-  //     }
-      
-  //     break;
-  //   }
-  //   else
-  //   {
-  //     debug() << "Path is infeasible" << eom << eom;
-  //     it++;
-  //     solver.pop_context();
-  //   }
-  // }
 
   if (disjunctive_domain.template_kind==disjunctive_domaint::TPOLYHEDRA)
   {
-    tpolyhedra_domaint *domain=static_cast<tpolyhedra_domaint *>(disjunctive_domain.base_domain());
+    tpolyhedra_domaint *domain=tpolyhedra_domain(disjunctive_domain.base_domain());
     for (disjunctive_domaint::disjunctt d=0; d<value.size(); d++)
     {
       solver.new_context();
-      tpolyhedra_domaint::templ_valuet *v=static_cast<tpolyhedra_domaint::templ_valuet *>(value[d]);
+      tpolyhedra_valuet &v=tpolyhedra_value(*value[d]);
       // set pre guard to true
       solver << domain->templ.begin()->pre_guard.op1();
       // set loop exit condition to false
       solver << not_exprt(loop->lc);
       debug() << "Disjunct pre-constraint: " << eom;
-      debug() << from_expr(domain->to_pre_constraints(*v)) << eom << eom;
-      solver << domain->to_pre_constraints(*v);
+      debug() << from_expr(domain->to_pre_constraints(v)) << eom << eom;
+      solver << domain->to_pre_constraints(v);
       
       if (!disjunctive_domain.seen_set[d].empty())
       {
         // negation of seen edges
         exprt::operandst c;
           
-        for (auto &x:disjunctive_domain.seen_set[d])
+        for (const auto &[_,path]:disjunctive_domain.seen_set[d])
         {
-          c.push_back(x.second.get_expr());
+          c.push_back(disjunction(path));
         }
         debug() << "Negating seen paths: " << from_expr(not_exprt(disjunction(c))) << eom << eom;
         solver << not_exprt(disjunction(c));
@@ -238,13 +203,8 @@ strategy_solver_disjunctivet::get_unresolved_edge(
         {
           exprt b=solver.get(guard);
           p.path_map[guard] = b.is_true();
-          if (b.is_true())
-            debug() << from_expr(guard);
-          else
-            debug() << from_expr(not_exprt(guard));
-          debug() << "&&";
         }
-        debug() << "\b\b" << eom << eom;
+        debug() << from_expr(ns,"",p.get_expr()) << eom << eom;
 
         e.disjunct=d;
         e.path=p;
@@ -270,43 +230,37 @@ Function: strategy_solver_disjunctivet::get_post
 \*******************************************************************/
 
 void strategy_solver_disjunctivet::get_post(
-  const symbolic_patht &p,
+  const symbolic_patht &path,
   invariantt &_pre_inv,
   invariantt &_post_inv)
 {
   debug() << "Computing post" << eom;
-  domaint *_domain=disjunctive_domain.base_domain();
-  debug() << "--------------------------------------------------" << eom;
   if (disjunctive_domain.get_template_kind()==disjunctive_domaint::TPOLYHEDRA)
   {
-    tpolyhedra_domaint domain(*static_cast<tpolyhedra_domaint *>(_domain));
-    tpolyhedra_domaint::templ_valuet &pre_inv=
-      static_cast<tpolyhedra_domaint::templ_valuet &>(_pre_inv);
-    tpolyhedra_domaint::templ_valuet &post_inv=
-      static_cast<tpolyhedra_domaint::templ_valuet &>(_post_inv);
-    domain.restrict_to_sympath(p);
+    tpolyhedra_domaint *domain=tpolyhedra_domain(disjunctive_domain.base_domain());
+    const tpolyhedra_valuet &pre_inv=
+      tpolyhedra_value(_pre_inv);
+    tpolyhedra_valuet &post_inv=
+      tpolyhedra_value(_post_inv);
+    domain->restrict_to_sympath(path);
 
-
-    domain.output_value(debug(),post_inv,ns);
-    debug() << "-------------------------------------------------" << eom << eom;
-    // strategy solver enumeration
-    solver.new_context();
+    solver.new_context(); // pre constraint
 
     std::cout << "Setting the loop select guard to true" << std::endl;
-    // std::cout << "pre guard: " << from_expr(domain.templ.begin()->pre_guard.op1()) << std::endl;
-    solver << domain.templ.begin()->pre_guard.op1();
+    solver << domain->templ.begin()->pre_guard.op1();
 
-    exprt preinv_expr=domain.to_pre_constraints(pre_inv);
+    exprt preinv_expr=domain->to_pre_constraints(pre_inv);
   #ifdef DEBUG_OUTPUT
     debug() << "pre-inv: " << from_expr(ns, "", preinv_expr) << eom;
   #endif
 
     solver << preinv_expr;
 
+    solver.new_context(); // post constraint
     exprt::operandst cond_exprs;
     exprt::operandst value_exprs;
     bvt cond_literals;
-    domain.make_not_post_constraints(
+    domain->make_not_post_constraints(
       post_inv, cond_exprs, value_exprs);
 
     cond_literals.resize(cond_exprs.size());
@@ -392,6 +346,8 @@ void strategy_solver_disjunctivet::get_post(
       }
   #endif
 
+      std::map<unsigned,constant_exprt> lower_values;
+
       for(std::size_t row=0; row<cond_literals.size(); ++row)
       {
         if(solver.l_get(cond_literals[row]).is_true())
@@ -404,8 +360,25 @@ void strategy_solver_disjunctivet::get_post(
           debug() << "raw value; " << from_expr(ns, "", value)
                   << ", simplified value: " << from_expr(ns, "", v) << eom;
 
-          domain.set_row_value(row, v, post_inv);
+          lower_values[row]=v;
         }
+      }
+      solver.pop_context(); // post constraint
+      for (auto &[row, lower] :  lower_values)
+      {
+        solver.new_context(); // symbolic value system
+        auto &templ_row=domain->templ[row];
+        symbol_exprt symb_value=domain->get_row_symb_value(row);
+        exprt c=and_exprt(templ_row.post_guard,
+          binary_relation_exprt(templ_row.expr, ID_ge, symb_value));
+        domain->rename(c);
+        exprt post=and_exprt(templ_row.aux_expr,c);
+        debug() << from_expr(post) << eom;
+        solver << post;
+        constant_exprt upper=domain->get_max_row_value(row);
+        binsearch(domain, symb_value, lower, upper);
+        domain->set_row_value(row,lower,post_inv);
+        solver.pop_context(); // symbolic value system
       }
     }
     else
@@ -424,63 +397,15 @@ void strategy_solver_disjunctivet::get_post(
       }
   #endif
     }
-    solver.pop_context();
+    solver.pop_context(); // pre constraint
 
-
-    // strategy_solver_enumerationt strategy_solver(
-    //   domain,solver,ns);
-    // strategy_solver.iterate(post_inv);
-
-
-    domain.output_value(debug(),post_inv,ns);
-    debug() << "--------------------------------------------------" << eom << eom;
-    domain.undo_restriction();
+    domain->output_value(debug(),post_inv,ns);
+    debug() << eom << eom;
+    domain->undo_restriction();
   }
   else
   {
     assert(false);
-  }
-}
-
-/*******************************************************************\
-
-Function: strategy_solver_disjunctivet::enumerate_all_paths
-
-  Inputs:
-
- Outputs:
-
- Purpose: Enumerate all paths inside the loop
-
-\*******************************************************************/
-
-void strategy_solver_disjunctivet::enumerate_all_paths(guardst &guards)
-{
-  for (auto &guard : guards)
-  {
-    if (all_paths.empty())
-    {
-      symbolic_patht p;
-      p.path_map[guard] = true;
-      all_paths.push_back(p);
-      p.path_map[guard] = false;
-      all_paths.push_back(p);
-    }
-    else
-    {
-      std::vector<symbolic_patht> new_paths;
-      for (auto &path : all_paths)
-      {
-        symbolic_patht path_(path);
-        path.path_map[guard] = true;
-        path_.path_map[guard] = false;
-        new_paths.push_back(path_);
-      }
-      for (auto &path : new_paths)
-      {
-        all_paths.push_back(path);
-      }
-    }
   }
 }
 
@@ -514,14 +439,14 @@ bool strategy_solver_disjunctivet::find_loop(
       loop->lc=eq_it->lhs();
       // std::cout << "lc: " << from_expr(loop->lc) << std::endl;
     }
-    // if (id.find("phi")!=id.npos)
-    // {
-    //   eq_it->rhs()=eq_it->rhs().op1(); // remove loop select & init
-    // }
+    if (id.find("phi")!=id.npos)
+    {
+      eq_it->rhs()=eq_it->rhs().op1(); // remove loop select & init
+    }
     loop->add_loophead_objects(*eq_it);
   }
 
-  while (n_it->loophead->location==loophead_loc)
+  while (n_it->loophead->location!=loophead_loc)
   {
     n_it++;
     loop->body_nodes.push_back(*n_it);
@@ -631,26 +556,27 @@ void strategy_solver_disjunctivet::add_loophead(
 {
   debug() << "Adding new loophead" << eom;
   local_SSAt::nodest::iterator n_it=loop->body_nodes.begin();
-  loopheads->push_back(*n_it);
-  local_SSAt::nodet &node=loopheads->back();
-  for (const equal_exprt &eq:node.equalities)
+  // auto node=*n_it;
+  loopheads.push_back(*n_it);
+  auto &node=loopheads.back();
+  for (equal_exprt &eq:node.equalities)
   {
-    equal_exprt eq_(eq);
-    rename(eq_,"_"+std::to_string(d),"");
-    solver << eq_;
-    const exprt &rhs=eq.rhs();
+    auto rhs=eq.rhs();
+    // equal_exprt eq_(eq);
+    rename(eq,"_"+std::to_string(d),"");
+    const exprt &rhs_=eq.rhs();
     if (rhs.id()==ID_symbol)
     {
-      debug() << "rhs: " << id2string(rhs.get(ID_identifier)) << eom;
       auto id=id2string(rhs.get(ID_identifier));
       if (id.find("guard")!=id.npos)
       {
-        exprt e=equal_exprt(eq_.rhs(),rhs);
+        exprt e=equal_exprt(rhs_,rhs);
         debug() << "(E) " << from_expr(e) << eom;
         solver << e;
       }
     }
-    debug() << "(E) " << from_expr(eq_) << eom;
+    debug() << "(E) " << from_expr(eq) << eom;
+    solver << eq;
   }
   debug() << eom;
 }
@@ -668,16 +594,29 @@ Function: strategy_solver_disjunctivet::add_edge
 \*******************************************************************/
 
 void strategy_solver_disjunctivet::add_edge(
-  disjunctive_domaint::disjunctt src, 
+  const disjunctive_domaint::disjunctt &src, 
   const symbolic_patht &path,
-  disjunctive_domaint::disjunctt sink)
+  const disjunctive_domaint::disjunctt &sink)
 {
-  debug() << "loophead objects: " << eom;
-  for (const irep_idt &id:loop->loophead_objects)
+  // check if edge from same src to same sink exists already
+  // if so, merge the paths
+  if (disjunctive_domain.seen_set[src].find(sink)
+      != disjunctive_domain.seen_set[src].end())
   {
-    debug() << id2string(id) << " ";
+    exprt::operandst &seen=disjunctive_domain.seen_set[src][sink];
+    if (disjunctive_domain.template_kind==disjunctive_domaint::TPOLYHEDRA)
+    {
+      tpolyhedra_domaint *domain=tpolyhedra_domain(disjunctive_domain.templ[src][sink]);
+      const exprt c=path.get_expr();
+      seen.push_back(c);
+      for(auto &row : domain->templ)
+      {
+        row.aux_expr=disjunction(seen);
+      }
+    }
+    return;
   }
-  debug() << eom;
+
   debug() << "Adding new SSA nodes" << eom;
 
   local_SSAt::nodest::iterator n_it=loop->body_nodes.begin();
@@ -705,46 +644,22 @@ void strategy_solver_disjunctivet::add_edge(
       rename(*c_it,src_suffix,sink_suffix);
       solver << *c_it;
     }
-    for (local_SSAt::nodet::function_callst::iterator f_it=node.function_calls.begin();
-          f_it!=node.function_calls.end();f_it++)
-    {
-      rename(*f_it,src_suffix,sink_suffix);
-    }
   }
   debug() << eom;
 
-  // for (auto &node:*loopheads)
-  // {
-  //   for (auto &eq:node.equalities)
-  //   {
-  //     debug() << "(E) " << from_expr(eq) << eom;
-  //   }
-  //   debug() << eom;
-  // }
-  
-  // for (auto &node:*loop_copies)
-  // {
-  //   for (auto &eq:node.equalities)
-  //   {
-  //     debug() << "(E) " << from_expr(eq) << eom;
-  //   }
-  //   debug() << eom;
-  // }
-
-  // add new edge to seen set
-  // disjunctive_domaint::seen_edget new_edge(src,path,sink);
-  // disjunctive_domain.seen_set.push_back(new_edge);
-  disjunctive_domain.seen_set[src][sink]=path;
+  exprt p=path.get_expr();
+  disjunctive_domain.seen_set[src][sink].push_back(p);
+  rename(p, src_suffix, sink_suffix);
 
   // add new template corresponding to new edge
   debug() << "Adding new templates" << eom;
   
   if (disjunctive_domain.template_kind==disjunctive_domaint::TPOLYHEDRA)
   {
-    tpolyhedra_domaint *base_domain=static_cast<tpolyhedra_domaint *>(disjunctive_domain.base_domain());
-    // replace_mapt new_renaming_map; // renaming map for new domain
+    tpolyhedra_domaint *base_domain=tpolyhedra_domain(disjunctive_domain.base_domain());
     replace_mapt map; // map from base domain exprts to new domain exprts
-    for (auto &x:disjunctive_domain.renaming_map)
+
+    for (const auto &x:disjunctive_domain.renaming_map)
     {
       exprt pre_var=x.first;
       exprt post_var=x.second;
@@ -783,24 +698,10 @@ void strategy_solver_disjunctivet::add_edge(
         replace_expr(map,expr);
         pre_guard=map[row.pre_guard];
         post_guard=map[row.post_guard];
-        aux_expr=map[row.aux_expr];
+        aux_expr=p; // restrict to path
       }
-      new_domain->add_template_row(expr,pre_guard,post_guard,aux_expr,row.kind);
-      solver << pre_guard.op1(); // set loop select guard to TRUE
+      new_domain->add_template_row(expr,pre_guard.op0(),post_guard,aux_expr,row.kind);
     }
-
-    // restrict new domain to symbolic path
-    symbolic_patht path_;
-    for (auto p:path.path_map)
-    {
-      exprt guard=p.first;
-      rename(guard,src_suffix,sink_suffix);
-      path_.path_map[guard]=p.second;
-    }
-    // debug() << "path for new domain: " << from_expr(path_.get_expr()) << eom;
-    // new_domain->output_domain(debug(), ns);
-    // debug() << eom;
-    new_domain->restrict_to_sympath(path_);
 
     // domains are sorted by source, then sink
     disjunctive_domain.templ[src][sink]=new_domain;
@@ -812,13 +713,11 @@ void strategy_solver_disjunctivet::add_edge(
   {
     assert(false);
   }
-
-  current_count++;
 }
 
 /*******************************************************************\
 
-Function: strategy_solver_disjunctivet::iterate_binsearch
+Function: strategy_solver_disjunctivet::binsearch
 
   Inputs:
 
@@ -828,303 +727,572 @@ Function: strategy_solver_disjunctivet::iterate_binsearch
 
 \*******************************************************************/
 
-bool strategy_solver_disjunctivet::iterate_binsearch(
-  disjunctive_domaint::disjunctive_valuet &inv)
+void strategy_solver_disjunctivet::compute_fixpoint(
+  disjunctive_domaint::disjunctive_valuet &inv,
+  strategyt strategy)
 {
   assert(disjunctive_domain.get_template_kind()==disjunctive_domaint::TPOLYHEDRA);
-  // tpolyhedra_domaint::templ_valuet &inv=
-  //   static_cast<tpolyhedra_domaint::templ_valuet &>(_inv);
 
-  bool improved=false;
+  // bool improved=false;
 
-  solver.new_context(); // for improvement check
-
-  std::map<unsigned,
-    std::map<unsigned,
-      tpolyhedra_domaint *>> tpolyhedra_domains;
-
-  std::map<unsigned, tpolyhedra_domaint::templ_valuet *> tpolyhedra_values;
-  std::map<unsigned, std::map<unsigned, symbol_exprt>> symb_values;
-
-  // consider generating pre-invariants in this loop
-  for (unsigned d=0; d<inv.size(); d++)
+  std::vector<std::vector<improvement_rowt>> cycles;
+  auto it=strategy.begin();
+  while (it!=strategy.end())
   {
-    // auto &temp=*(inv[d]);
-    tpolyhedra_values[d]=static_cast<tpolyhedra_domaint::templ_valuet *>(inv[d]);
-    for (std::size_t row=0; row<tpolyhedra_values[d]->size(); row++)
+    bool cycle_found=false;
+    auto sink=it->first;
+    debug() << sink.first << "," << sink.second << eom;
+    std::vector<improvement_rowt> cycle;
+    cycle.push_back(sink);
+
+    while (strategy.find(sink)!=strategy.end())
     {
-      symb_values[d][row]=symbol_exprt(
-        "symb_bound#"+i2string(disjunctive_domain.domain_number)+"_"+i2string(d)+"$"+i2string(row), 
-        static_cast<tpolyhedra_domaint *>(disjunctive_domain.base_domain())->templ[row].expr.type());
-    }
-  }
-
-//   exprt inv_expr=disjunctive_domain.to_pre_constraints(inv);
-
-  // disjunctive_domain.make_not_post_constraints(
-  //   inv, disjunctive_strategy_cond_exprs, disjunctive_strategy_value_exprs);
-
-#if 1
-  debug() << "improvement check: " << eom;
-  debug() << "pre-inv: ";
-  bool print_flag=false;
-#endif
-
-  for (unsigned src=0; src<inv.size(); src++)
-  {
-    // unsigned src=src_it.first;
-    // for (auto &sink_it:src_it.second)
-    if (!disjunctive_domain.templ[src].empty())
-    {
-      exprt::operandst pre_cond_exprs;
-      tpolyhedra_domaint *domain=static_cast<tpolyhedra_domaint *>(disjunctive_domain.templ[src].begin()->second);
-      tpolyhedra_domaint::templatet templ=domain->templ;
-      const tpolyhedra_domaint::templ_valuet &value=*tpolyhedra_values[src];
-      assert(value.size()==templ.size());
-      strategy_pre_cond_exprs[src].resize(templ.size());
-      for (std::size_t row=0; row<templ.size(); ++row)
+      sink=strategy[sink];
+      cycle.push_back(sink);
+      if (sink==cycle.front())
       {
-        strategy_pre_cond_exprs[src][row]=
-          domain->get_row_pre_constraint(row,value[row]);
-        strategy_pre_cond_literals[src][row]=
-          solver.convert(strategy_pre_cond_exprs[src][row]);
-        solver << strategy_pre_cond_exprs[src][row];
-
-#if 1
-        debug() << (print_flag ? " && " : "") << from_expr(ns, "", strategy_pre_cond_exprs[src][row]);
-        print_flag = true;
-#endif
+        it=strategy.erase(it);
+        cycle_found=true;
+        cycles.push_back(cycle);
+        break;
       }
-#if 1
-      debug() << eom;
-#endif
     }
+    if (!cycle_found)
+      it++;
   }
 
-#if 1
-  debug() << "post-inv: ";
-  print_flag=false;
-#endif
-
-  exprt::operandst c;
-  for (auto &src_it:disjunctive_domain.templ)
+  if (!cycles.empty())
   {
-    unsigned src=src_it.first;
-    for (auto &sink_it:src_it.second)
+    debug() << "Cycles found: " << eom;
+    for (const auto &cycle : cycles)
     {
-      unsigned sink=sink_it.first;
-
-      // exprt::operandst post_cond_exprs;
-      // exprt::operandst value_exprs;
-      tpolyhedra_domaint *domain=static_cast<tpolyhedra_domaint *>(sink_it.second);
-      tpolyhedra_domains[src][sink]=domain;
-      tpolyhedra_domaint::templatet templ=tpolyhedra_domains[src][sink]->templ;
-      const tpolyhedra_domaint::templ_valuet &value=*tpolyhedra_values[sink];
-
-      assert(value.size()==templ.size());
-      strategy_post_cond_exprs[src][sink].resize(templ.size());
-      strategy_value_exprs[src][sink].resize(templ.size());
-      strategy_post_cond_literals[src][sink].resize(templ.size());
-
-      for (std::size_t row=0; row<templ.size(); ++row)
+      for (const auto &row : cycle)
       {
-        strategy_value_exprs[src][sink][row]=templ[row].expr;
-        domain->rename(strategy_value_exprs[src][sink][row]);
-        
-        strategy_post_cond_exprs[src][sink][row]=
-          and_exprt(templ[row].aux_expr,
-            not_exprt(domain->get_row_post_constraint(row, value[row])));
-
-#if 1
-        debug() << (print_flag ? " || " : "") << from_expr(ns, "", strategy_post_cond_exprs[src][sink][row]);
-        print_flag=true;
-#endif 
-
-        literalt &l=strategy_post_cond_literals[src][sink][row];
-        strategy_post_cond_literals[src][sink][row]=
-          solver.convert(strategy_post_cond_exprs[src][sink][row]);
-        strategy_post_cond_exprs[src][sink][row]=
-          literal_exprt(l);
-        c.push_back(strategy_post_cond_exprs[src][sink][row]);
+        strategy.erase(row);
+        debug() << "(" << row.first << "," << row.second << ") ";
       }
-#if 1
       debug() << eom;
-#endif
     }
   }
 
-  solver << disjunction(c);
-#if 1
-  debug() << eom;
-#endif
-
-  std::map<unsigned,
-    std::map<tpolyhedra_domaint::rowt, 
-      constant_exprt>> lower_values;
-  // exprt::operandst blocking_constraint;
-
-#if 1
-  debug() << "solve(): ";
-#endif
-
-  while (solver()==decision_proceduret::D_SATISFIABLE)
+  for (const auto &cycle : cycles)
   {
-#if 1
-    debug() << "SAT" << eom;
-#endif
-    while(find_improvement(inv))
-    {
+    auto it=cycle.begin();
+    auto from = *it;
+    auto to=*++it;
+    unsigned row=from.second;
+    debug() << "improving row " << row << " of disjunct " << from.first << eom;
+    constant_exprt lower=tpolyhedra_value(*inv[from.first])[row];
+    debug() << "lower: " << from_expr(lower) << eom;
 
+    tpolyhedra_domaint *domain=tpolyhedra_domain(disjunctive_domain.templ[from.first][to.first]);
+
+    constant_exprt upper=domain->get_max_row_value(row);
+    debug() << "upper: " << from_expr(upper) << eom;
+
+    auto templ_row=domain->templ[row];
+    symbol_exprt symb_value=domain->get_row_symb_value(row);
+    std::set<unsigned> improve_rows;
+    improve_rows.insert(row);
+    exprt pre = domain->to_symb_pre_constraints(tpolyhedra_value(*inv[from.first]), improve_rows);
+    solver.new_context(); // path composition
+    debug() << "aux: " << from_expr(domain->templ[from.second].aux_expr) << eom;
+    solver << domain->templ[from.second].aux_expr;
+
+    for (it++;it!=cycle.end();it++)
+    {
+      exprt::operandst post_vars;
+      for (equal_exprt eq : loopheads[from.first].equalities)
+      {
+        auto id=id2string(eq.lhs().get(ID_identifier));
+        if (id.find("phi")!=id.npos)
+        {
+          post_vars.push_back(renaming_map[eq.rhs()]);
+        }
+      }
+      exprt::operandst pre_vars;
+      for (equal_exprt eq : loopheads[to.first].equalities)
+      {
+        auto id=id2string(eq.lhs().get(ID_identifier));
+        if (id.find("phi")!=id.npos)
+        {
+          pre_vars.push_back(eq.rhs());
+        }
+      }
+      assert(pre_vars.size()==post_vars.size());
+      for (unsigned i=0; i<pre_vars.size(); i++)
+      {
+        debug() << from_expr(equal_exprt(pre_vars[i],post_vars[i])) << eom;
+        solver << equal_exprt(pre_vars[i],post_vars[i]);
+      }
+
+      from=to;
+      to = *it;
+      domain=tpolyhedra_domain(disjunctive_domain.templ[from.first][to.first]);
+      debug() << "aux: " << from_expr(domain->templ[from.second].aux_expr) << eom;
+      solver << domain->templ[from.second].aux_expr;
     }
+    
+    solver.new_context(); // symbolic value system
+    debug() << "pre: " << from_expr(pre) << eom;
+    solver << pre;
+    debug() << from_expr(not_exprt(equal_exprt(symb_value, templ_row.expr))) << eom;
+    solver << not_exprt(equal_exprt(symb_value, templ_row.expr));
+
+    row = to.second;
+    templ_row=domain->templ[row];
+    exprt post=and_exprt(
+      templ_row.post_guard,
+      binary_relation_exprt(templ_row.expr, ID_ge, symb_value));
+    domain->rename(post);
+    debug() << "post: " << from_expr(post) << eom;
+    solver << post;
+    
+    it=cycle.begin();
+    from=*it;
+    it++;
+    to=*it;
+    domain = tpolyhedra_domain(disjunctive_domain.templ[from.first][to.first]);
+    if (solver() == decision_proceduret::D_SATISFIABLE)
+    {
+      debug() << "update value: " << from_expr(ns, "", lower) << eom;
+      binsearch(domain,symb_value,lower,upper);
+
+      improve_row(inv, from.first, row, lower);
+    }
+    solver.pop_context(); // symbolic value system
+
+    // plug in current value for propagation
+    domain=tpolyhedra_domain(disjunctive_domain.templ[from.first][to.first]);
+    pre = domain->to_pre_constraints(tpolyhedra_value(*inv[from.first]));
+    debug() << "pre: " << from_expr(pre) << eom;
+    solver << pre;
+    solver();
+    std::vector<constant_exprt> lower_values;
+    for (it++;it!=cycle.end();it++)
+    {
+      from=to;
+      to=*it;
+      auto templ_row=domain->templ[from.second];
+      exprt post_var=templ_row.expr;
+      domain->rename(post_var);
+      debug() << from_expr(post_var) << " = " << from_expr(simplify_const(solver.get(post_var))) << eom;
+      lower_values.push_back(simplify_const(solver.get(post_var)));
+      domain=tpolyhedra_domain(disjunctive_domain.templ[from.first][to.first]);
+    }
+
+    assert(lower_values.size()==cycle.size()-2);
+
+    debug() << "Propagating new value to cycle nodes" << eom;
+    for (unsigned i=0; i<cycle.size()-2;i++)
+    {
+      from=cycle[i];
+      to=cycle[i+1];
+      debug() << "improving row " << to.second << " of disjunct " << to.first << eom;
+      solver.new_context(); //symbolic value system
+      domain=tpolyhedra_domain(disjunctive_domain.templ[from.first][to.first]);
+      templ_row=domain->templ[to.second];
+      symb_value=domain->get_row_symb_value(to.second);
+      post=and_exprt(templ_row.post_guard,
+      binary_relation_exprt(templ_row.expr, ID_ge, symb_value));
+      domain->rename(post);
+      debug() << "post: " << from_expr(post) << eom;
+      solver << post;
+      debug() << "aux: " << from_expr(templ_row.aux_expr) << eom;
+      solver << templ_row.aux_expr;
+
+      lower=lower_values[i];
+      debug() << "update value: " << from_expr(ns, "", lower) << eom;
+
+      upper=domain->get_max_row_value(to.second);
+
+      binsearch(domain,symb_value,lower,upper);
+
+      improve_row(inv, to.first, to.second, lower);
+
+      solver.pop_context(); //symbolic value system
+    }
+
+    solver.pop_context(); // path composition
+  }
+
+  // TODO : check that this section is correct
+  // find paths
+  std::vector<std::vector<improvement_rowt>> paths;
+  for (auto it=strategy.begin();it!=strategy.end();it++)
+  {
+    auto to=it->first;
+    auto from=it->second;
+    bool appended=false;
+    for (auto &path:paths)
+    {
+      if (path.back()==from)
+      {
+        path.push_back(to);
+        appended=true;
+      }
+    }
+    std::vector<improvement_rowt> path;
+    if (!appended)
+    {
+      path.push_back(from);
+      path.push_back(to);
+      while (strategy.find(from)!=strategy.end())
+      {
+        from=strategy[from];
+        path.insert(path.begin(),from);
+      }
+      paths.push_back(path);
+    }
+  }
+
+  if (!paths.empty())
+  {
+    debug() << "Paths found: " << eom;
+    for (const auto &path : paths)
+    {
+      for (const auto &row : path)
+      {
+        debug() << "(" << row.first << "," << row.second << ")";
+      }
+      debug() << eom;
+    }
+  }
+
+  for (const auto &path : paths)
+  {
+    solver.new_context(); // path compostion
+    auto it=path.begin();
+    auto from=*it;
+    auto to=*++it;
+    tpolyhedra_domaint *domain=tpolyhedra_domain(disjunctive_domain.templ[from.first][to.first]);
+    while (it!=path.end())
+    {
+      debug() << "aux: " << from_expr(domain->templ[from.second].aux_expr) << eom;
+      solver << domain->templ[from.second].aux_expr;
+
+      exprt::operandst post_vars;
+      for (equal_exprt eq : loopheads[from.first].equalities)
+      {
+        auto id=id2string(eq.lhs().get(ID_identifier));
+        if (id.find("phi")!=id.npos)
+        {
+          post_vars.push_back(renaming_map[eq.rhs()]);
+        }
+      }
+      exprt::operandst pre_vars;
+      for (equal_exprt eq : loopheads[to.first].equalities)
+      {
+        auto id=id2string(eq.lhs().get(ID_identifier));
+        if (id.find("phi")!=id.npos)
+        {
+          pre_vars.push_back(eq.rhs());
+        }
+      }
+      assert(pre_vars.size()==post_vars.size());
+      for (unsigned i=0; i<pre_vars.size(); i++)
+      {
+        debug() << from_expr(equal_exprt(pre_vars[i],post_vars[i])) << eom;
+        solver << equal_exprt(pre_vars[i],post_vars[i]);
+      }
+
+      from=to;
+      to = *++it;
+      domain=tpolyhedra_domain(disjunctive_domain.templ[from.first][to.first]);
+    }
+
+    it=path.begin();
+    from=*it;
+    to=*++it;
+    domain=tpolyhedra_domain(disjunctive_domain.templ[from.first][to.first]);
+    exprt pre = domain->to_pre_constraints(tpolyhedra_value(*inv[from.first]));
+    debug() << "pre: " << from_expr(pre) << eom;
+    solver << pre;
+    solver();
+    std::vector<constant_exprt> lower_values;
+    while (it!=path.end())
+    {
+      auto templ_row=domain->templ[to.second];
+      exprt post_var=templ_row.expr;
+      domain->rename(post_var);
+      debug() << from_expr(post_var) << " = " << from_expr(simplify_const(solver.get(post_var))) << eom;
+      lower_values.push_back(simplify_const(solver.get(post_var)));
+      from=to;
+      to=*++it;
+      domain=tpolyhedra_domain(disjunctive_domain.templ[from.first][to.first]);
+    }
+
+    for (auto &lower : lower_values)
+    {
+      debug() << from_expr(lower) << eom;
+    }
+    assert(lower_values.size()==path.size()-1);
+
+    debug() << "Propagating new value to path nodes" << eom;
+    for (unsigned i=0; i<path.size()-1;i++)
+    {
+      from=path[i];
+      to=path[i+1];
+      debug() << "improving row " << to.second << " of disjunct " << to.first << eom;
+      solver.new_context(); //symbolic value system
+      domain=tpolyhedra_domain(disjunctive_domain.templ[from.first][to.first]);
+      auto templ_row=domain->templ[to.second];
+      symbol_exprt symb_value=domain->get_row_symb_value(to.second);
+      exprt post=and_exprt(templ_row.post_guard,
+      binary_relation_exprt(templ_row.expr, ID_ge, symb_value));
+      domain->rename(post);
+      debug() << "post: " << from_expr(post) << eom;
+      solver << post;
+      debug() << "aux: " << from_expr(templ_row.aux_expr) << eom;
+      solver << templ_row.aux_expr;
+
+      constant_exprt lower=lower_values[i];
+      debug() << "update value: " << from_expr(ns, "", lower) << eom;
+
+      constant_exprt upper=domain->get_max_row_value(to.second);
+
+      binsearch(domain,symb_value,lower,upper);
+
+      improve_row(inv, to.first, to.second, lower);
+
+      solver.pop_context(); //symbolic value system
+    }
+    solver.pop_context(); // path composition
+  }
+}
+
+void strategy_solver_disjunctivet::binsearch(
+  tpolyhedra_domaint *domain,
+  const symbol_exprt &symb_value,
+  constant_exprt &lower,
+  constant_exprt &upper)
+{
+  while(domain->less_than(lower, upper))
+  {
+    tpolyhedra_domaint::row_valuet middle=
+      domain->between(lower, upper);
+    if(!domain->less_than(lower, middle))
+      middle=upper;
+
+    // row_symb_value >= middle
+    exprt c=binary_relation_exprt(symb_value, ID_ge, middle);
+
+#if 1
+    debug() << "upper: " << from_expr(ns, "", upper) << eom;
+    debug() << "middle: " << from_expr(ns, "", middle) << eom;
+    debug() << "lower: " << from_expr(ns, "", lower) << eom;
+#endif
+
+    solver.new_context(); // binary search iteration
+
+#if 1
+    debug() << "constraint: " << from_expr(ns, "", c) << eom;
+#endif
+
+    solver << c;
+
+    if(solver()==decision_proceduret::D_SATISFIABLE)
+    {
+#if 1
+      debug() << "SAT" << eom;
+#endif
+
+#if 1
+      debug() << from_expr(ns, "", symb_value)
+              << " " << from_expr(
+                ns, "", solver.get(symb_value))
+              << eom;
+#endif
+
+      lower=simplify_const(
+        solver.get(symb_value));
+    }
+    else
+    {
+#if 1
+      debug() << "UNSAT" << eom;
+#endif
+
+#if 1
+      for(std::size_t i=0; i<solver.formula.size(); ++i)
+      {
+        if(solver.solver->is_in_conflict(solver.formula[i]))
+          debug() << "is_in_conflict: " << solver.formula[i] << eom;
+        else
+          debug() << "not_in_conflict: " << solver.formula[i] << eom;
+      }
+#endif
+
+      if(!domain->less_than(middle, upper))
+        middle=lower;
+      upper=middle;
+    }
+    solver.pop_context(); // binary search iteration
   }
 }
 
 void strategy_solver_disjunctivet::print_model(const exprt &expr)
 {
-  forall_operands(it, expr)
+  // debug() << from_expr(expr) << eom;
+  if (expr.id()==ID_symbol)
   {
-    if(it->id()==ID_symbol)
+    debug() << from_expr(expr) << ": " << from_expr(simplify_const(solver.get(expr))) << eom;
+  }
+  forall_operands(it,expr)
+  {
+    print_model(*it);
+  }
+}
+
+void strategy_solver_disjunctivet::print_all()
+{
+  for (auto &node: loopheads)
+  {
+    for (auto &eq : node.equalities)
     {
-      debug() << from_expr(*it) << ": "
-        << from_expr(simplify_const(solver.get(*it))) << eom;
+      print_model(eq);
+    }
+  }
+  for (auto &node : *loop_copies)
+  {
+    for (auto &eq : node.equalities)
+    {
+      print_model(eq);
+    }
+  }
+}
+
+bool strategy_solver_disjunctivet::find_strategy(
+  const disjunctive_domaint::disjunctive_valuet &inv,
+  strategyt &strategy)
+{
+  bool improved=false;
+  while (!last_improved.empty())
+  {
+    const improvementt &from=last_improved.top();
+    debug() << from.first.first << " " << from.first.second << eom;
+
+    if (find_improving_row(inv,from,strategy))
+    {
+      improved=true;
     }
     else
     {
-      print_model(*it);
-    }    
-  }
-}
-
-bool strategy_solver_disjunctivet::find_improvement(
-  disjunctive_domaint::disjunctive_valuet &inv)
-{
-  while (!last_improved.empty())
-  {
-    const improvement_rowt &from=last_improved.top();
-    unsigned src=from.disjunct;
-    improvement_rowt to(from);
-
-    if (find_improving_row(from,to))
-    {
-      debug() << eom;
-      unsigned sink=to.disjunct;
-      unsigned row=to.row;
-      const constant_exprt &value=simplify_const(solver.get(strategy_value_exprs[src][sink][row]));
-      improve_row(inv,to,value);
-      // improvement_graph[from].push_back(to);
-      return true;
-    }
-    last_improved.pop();
-  }
-
-  for (const auto &src_it : strategy_post_cond_literals)
-  {
-    unsigned src=src_it.first;
-
-    for (const auto &sink_it : src_it.second)
-    {
-      unsigned sink=sink_it.first;
-      const bvt &cond_literals=sink_it.second;
-      for (unsigned i=0; i<cond_literals.size(); i++)
-      {
-        if (solver.l_get(cond_literals[i]).is_true())
-        {
-          improvement_rowt to(sink,i);
-          const constant_exprt &value=simplify_const(solver.get(strategy_value_exprs[src][sink][i]));
-          improve_row(inv,to,value);
-          return true;
-        }
-      }
+      last_improved.pop();
     }
   }
-  return false;
+  return improved;
 }
-
-// strategy_solver_disjunctivet::improve_pathst::iterator
-//   strategy_solver_disjunctivet::find_path(const improve_rowt &row)
-// {
-//   improve_pathst::iterator it=improve_paths.begin();
-//   for (;it!=improve_paths.end(); it++)
-//   {
-//     if (!(it->is_cycle) && (it->path.back()==row))
-//     {
-//       return it;
-//     }
-//   }
-//   return it;
-// }
 
 bool strategy_solver_disjunctivet::find_improving_row(
-  const strategy_solver_disjunctivet::improvement_rowt &from,
-  strategy_solver_disjunctivet::improvement_rowt &to)
+  const disjunctive_domaint::disjunctive_valuet &inv,
+  const improvementt &improvement,
+  strategyt &strategy)
 {
-  solver.new_context();
-  unsigned src=from.disjunct;
-  solver << strategy_pre_cond_exprs[src][from.row];
-  debug() << "isolating improvement from " << from_expr(ns, "", strategy_pre_cond_exprs[src][from.row]) << eom;
-  // consider using solver->set_assumptions instead
-  
-  for (const auto &sink_it : disjunctive_domain.templ[src])
+  const improvement_rowt &from=improvement.first;
+  unsigned src=from.first;
+  unsigned row=from.second;
+  if (disjunctive_domain.templ[src].empty())
+    return false;
+
+  solver.new_context(); // pre constraint
+  tpolyhedra_domaint *domain=tpolyhedra_domain(disjunctive_domain.templ[src].begin()->second);
+  const tpolyhedra_valuet &v=tpolyhedra_value(*inv[src]);
+  const tpolyhedra_domaint::templatet &templ=domain->templ;
+  exprt::operandst c;
+  for (unsigned row=0; row<templ.size(); row++)
   {
-    to.disjunct=sink_it.first;
-    unsigned sink=to.disjunct;
-    exprt::operandst &post_cond_exprs=strategy_post_cond_exprs[src][sink];
-    solver << disjunction(post_cond_exprs);
-    if (solver()==decision_proceduret::D_SATISFIABLE)
+    if (row==from.second)
     {
-      for (unsigned row=0; row<post_cond_exprs.size(); row++)
+      c.push_back(domain->get_row_pre_constraint(row,improvement.second));
+    }
+    else
+    {
+      c.push_back(domain->get_row_pre_constraint(row,v[row]));
+    }
+  }
+  exprt pre=conjunction(c);
+  solver << pre;
+  debug() << "isolating improvement from " << from_expr(ns, "", pre) << eom;
+  
+  for (const auto &[sink, sink_domain] : disjunctive_domain.templ[src])
+  {
+    tpolyhedra_domaint *domain=tpolyhedra_domain(sink_domain);
+    tpolyhedra_domaint::templatet &templ=domain->templ;
+    for (unsigned row=0; row<templ.size(); row++)
+    {
+      solver.new_context(); // post constraint
+      improvement_rowt to(sink,row);
+      const constant_exprt &value=tpolyhedra_value(*inv[sink])[row];
+      if (strategy.find(to)==strategy.end())  // check if to is already blocked
       {
-        if (solver.l_get(strategy_post_cond_literals[src][sink][row]).is_true())
+        exprt post=and_exprt(templ[row].aux_expr,
+            not_exprt(domain->get_row_post_constraint(row, value)));
+
+        solver << post;
+        debug() << "post: " << from_expr(post) << eom;
+        if (solver()==decision_proceduret::D_SATISFIABLE)
         {
-          to.row=row;
-          solver.pop_context();
+          exprt value_expr=templ[row].expr;
+          domain->rename(value_expr);
+          debug() << from_expr(value_expr) << " " << from_expr(solver.get(value_expr)) << eom;
+          const constant_exprt &value=simplify_const(solver.get(value_expr));
+          last_improved.push(improvementt(to,value));
+          strategy[to]=from;
+          solver.pop_context(); // post constraint
+          solver.pop_context(); // pre constraint
           return true;
         }
       }
+      solver.pop_context(); // post constraint
     }
   }
 
-  solver.pop_context();
+  solver.pop_context(); // pre constraint
   return false;
 }
 
-void strategy_solver_disjunctivet::improve_row(
+void strategy_solver_disjunctivet::join(
   disjunctive_domaint::disjunctive_valuet &inv,
-  const strategy_solver_disjunctivet::improvement_rowt &to,
-  const constant_exprt &value)
+  const unsigned disjunct,
+  const tpolyhedra_domaint::templ_valuet &value)
 {
-  unsigned sink=to.disjunct;
-  unsigned row=to.row;
-  tpolyhedra_domaint::templ_valuet *v=static_cast<tpolyhedra_domaint::templ_valuet*>(inv[sink]);
-
-  v->at(row)=value;
-
-  if (!disjunctive_domain.templ[sink].empty())
+  tpolyhedra_domaint *domain=tpolyhedra_domain(disjunctive_domain.base_domain());
+  tpolyhedra_domaint::templatet &templ=domain->templ;
+  for (unsigned row=0;row<templ.size();row++)
   {
-    tpolyhedra_domaint *domain=static_cast<tpolyhedra_domaint *>(disjunctive_domain.templ[sink].begin()->second);
-    tpolyhedra_domaint::templatet &templ=domain->templ;
-
-    strategy_pre_cond_exprs[sink][row]=
-      domain->get_row_pre_constraint(row,value);
-    strategy_pre_cond_literals[sink][row]=
-      solver.convert(strategy_pre_cond_exprs[sink][row]);
+    improve_row(inv,disjunct,row,value[row]);
   }
+}
 
-  // disable all other edges feeding into irow
-  for (unsigned src=0;src<inv.size();src++)
+bool strategy_solver_disjunctivet::improve_row(
+  disjunctive_domaint::disjunctive_valuet &inv,
+  const unsigned disjunct,
+  const unsigned row,
+  const constant_exprt &row_value)
+{
+  tpolyhedra_valuet &v=tpolyhedra_value(*inv[disjunct]);
+  tpolyhedra_domaint *domain=tpolyhedra_domain(disjunctive_domain.base_domain());
+  bool improved=false;
+  if(domain->is_row_value_inf(v[row]))
   {
-    if (disjunctive_domain.templ[src].find(sink)!=disjunctive_domain.templ[src].end())
+    v[row]=true_exprt();
+  }
+  else if (domain->is_row_value_inf(row_value))
+  {
+    v[row]=true_exprt();
+    improved=true;
+  }
+  else if(!domain->is_row_value_neginf(row_value))
+  {
+    if(domain->less_than(v[row], row_value) || 
+      domain->is_row_value_neginf(v[row]))
     {
-      tpolyhedra_domaint *domain=static_cast<tpolyhedra_domaint *>(disjunctive_domain.templ[src][sink]);
-      tpolyhedra_domaint::templatet &templ=domain->templ;
-      strategy_post_cond_exprs[src][sink][row]=
-        and_exprt(templ[row].aux_expr,
-          not_exprt(domain->get_row_post_constraint(row, value)));
-      strategy_post_cond_literals[src][sink][row]=
-        solver.convert(strategy_post_cond_exprs[src][sink][row]);
-      strategy_post_cond_exprs[src][sink][row]=
-        literal_exprt(strategy_post_cond_literals[src][sink][row]);
-      solver << literal_exprt(!(strategy_post_cond_literals[src][sink][row]));
+      v[row]=row_value;
+      improved=true;
     }
   }
+  if (improved)
+    last_improved.push(improvementt(improvement_rowt(disjunct,row),row_value));
+  return improved;
 }

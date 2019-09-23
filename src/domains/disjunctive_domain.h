@@ -36,8 +36,18 @@ public:
   typedef std::map<disjunctt, std::map<disjunctt,exprt::operandst>> disjunctive_exprst;
   typedef std::map<disjunctt, std::map<disjunctt,bvt>> disjunctive_literalst;
 
-  class disjunctive_valuet:public valuet, public std::vector<valuet *>
+  class disjunctive_valuet:public valuet, public std::vector<valuet*>
   {
+    ~disjunctive_valuet()
+    {
+      for (auto value:*this)
+      {
+        if (value!=NULL)
+        {
+          delete value;
+        }
+      }
+    }
   };
   
   class lex_metrict
@@ -120,7 +130,7 @@ public:
   };
   
   // typedef std::vector<exprt> guardst;
-  typedef std::map<disjunctt,std::map<disjunctt,symbolic_patht>> seen_sett;
+  typedef std::map<disjunctt,std::map<disjunctt,exprt::operandst>> seen_sett;
 
   disjunctive_domaint(
     unsigned int _domain_number,
@@ -148,12 +158,12 @@ public:
   {
     if (base_domain_ptr!=NULL)
       delete base_domain_ptr;
-    for (auto &i:templ)
+    for (auto &[_,sink_domains]:templ)
     {
-      for (auto &j:i.second)
+      for (auto &[_,domain]:sink_domains)
       {
-        if (j.second!=NULL)
-          delete j.second;
+        if (domain!=NULL)
+          delete domain;
       }
     }
   }

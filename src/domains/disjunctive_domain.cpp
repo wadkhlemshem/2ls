@@ -19,6 +19,9 @@ Author: Johanan Wahlang
 #include "util.h"
 #include "domain.h"
 
+#define tpolyhedra_value(value) \
+  *static_cast<tpolyhedra_domaint::templ_valuet *>(value)
+
 #define ENABLE_HEURISTICS
 
 /*******************************************************************\
@@ -132,12 +135,12 @@ void disjunctive_domaint::output_domain(
       {
         static_cast<tpolyhedra_domaint *>(base_domain_ptr)->output_domain(out,ns);
       }
-      for (auto &x:templ)
+      for (const auto &[src, sink_domains]:templ)
       {
-        for (auto &y:x.second)
+        for (const auto &[sink, domain]:sink_domains)
         {
-          out << "Template for edge from disjunct " << y.first << " to disjunct " << x.first << std::endl;
-          static_cast<tpolyhedra_domaint *>(y.second)->output_domain(out,ns);
+          out << "Template for edge from disjunct " << src << " to disjunct " << sink << std::endl;
+          static_cast<tpolyhedra_domaint *>(domain)->output_domain(out,ns);
           out << std::endl;
         }
       }
@@ -206,14 +209,14 @@ disjunctive_domaint::disjunctt disjunctive_domaint::merge_heuristic(disjunctive_
   {
     tpolyhedra_domaint::templ_valuet &v_new=static_cast<tpolyhedra_domaint::templ_valuet &>(value);
     disjunctt d=0;    
-    tpolyhedra_domaint::templ_valuet *v=static_cast<tpolyhedra_domaint::templ_valuet *>(dv[d]);
-    lex_metrict distance=hausdorff_distance(*v, v_new);
+    tpolyhedra_domaint::templ_valuet &v=tpolyhedra_value(dv[d]);
+    lex_metrict distance=hausdorff_distance(v, v_new);
     lex_metrict min_distance=distance;
     disjunctt min_disjunct=d;
     for (; d<dv.size(); d++)
     {
-      tpolyhedra_domaint::templ_valuet *v=static_cast<tpolyhedra_domaint::templ_valuet *>(dv[d]);
-      lex_metrict distance=hausdorff_distance(*v, v_new);
+      tpolyhedra_domaint::templ_valuet &v=tpolyhedra_value(dv[d]);
+      lex_metrict distance=hausdorff_distance(v, v_new);
       if (distance<min_distance)
       {
         min_distance=distance;

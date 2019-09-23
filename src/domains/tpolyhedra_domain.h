@@ -148,6 +148,7 @@ protected:
   friend class strategy_solver_binsearcht;
   friend class strategy_solver_enumerationt;
   friend class strategy_solver_disjunctivet;
+  friend class disjunctive_domaint;
 
   templatet templ;
 };
