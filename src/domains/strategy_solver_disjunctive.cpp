@@ -47,16 +47,37 @@ bool strategy_solver_disjunctivet::iterate(
     // initial strategy
     if (inv.size()==0)
     {
-      tpolyhedra_valuet result;
-      domain->initialize(result);
-      strategy_solver_enumerationt strategy_solver(
-        *domain,solver,ns);
-      strategy_solver.iterate(result);
+      tpolyhedra_valuet pre, post;
+      domain->initialize(pre);
+      domain->initialize(post);
+      replace_mapt map=disjunctive_domain.renaming_map;
+      if (disjunctive_domain.std_invariants)
+      {
+        domain->renaming_map=disjunctive_domain.aux_renaming_map;
+      }
+      get_post(symbolic_patht(),pre,post,true);
+
+      if (disjunctive_domain.std_invariants)
+      {
+        domain->renaming_map=map;
+      
+        for (unsigned row=0; row<domain->templ.size(); row++)
+        {
+          auto &templ_row=domain->templ[row];
+          templ_row.post_guard=templ_row.post_guard.op0();
+          templ_row.aux_expr=true_exprt();
+
+          exprt post1=templ_row.expr;
+          disjunctive_domain.rename(post1);
+          exprt post2=templ_row.expr;
+          domain->rename(post2);
+          debug() << from_expr(templ_row.expr) << " " << from_expr(post1) << " " << from_expr(post2) << eom;
+        }
+      }
       debug() << "Initial value: " << eom;
-      domain->output_value(debug(),result,ns);
+      domain->output_value(debug(),post,ns);
       debug() << eom;
-      add_new_replication(inv,0,result);
-      domain->clear_aux_symbols(); // if std-invariants was true
+      add_new_replication(inv,0,post);
     }
 
     disjunctive_domaint::unresolved_edget e=get_unresolved_edge(inv);
@@ -77,6 +98,8 @@ bool strategy_solver_disjunctivet::iterate(
     domain->initialize(post);
     
     get_post(path,pre,post);
+    domain->output_value(debug(),post,ns);
+    debug() << eom << eom;
 
     sink=disjunctive_domain.merge_heuristic(inv, post);
 
@@ -232,7 +255,8 @@ Function: strategy_solver_disjunctivet::get_post
 void strategy_solver_disjunctivet::get_post(
   const symbolic_patht &path,
   invariantt &_pre_inv,
-  invariantt &_post_inv)
+  invariantt &_post_inv,
+  bool init)
 {
   debug() << "Computing post" << eom;
   if (disjunctive_domain.get_template_kind()==disjunctive_domaint::TPOLYHEDRA)
@@ -246,9 +270,17 @@ void strategy_solver_disjunctivet::get_post(
 
     solver.new_context(); // pre constraint
 
-    std::cout << "Setting the loop select guard to true" << std::endl;
-    solver << domain->templ.begin()->pre_guard.op1();
-
+    if (init)
+    {
+      std::cout << "Setting the loop select guard to false" << std::endl;
+      solver << not_exprt(domain->templ.begin()->pre_guard.op1());
+    }
+    else
+    {
+      std::cout << "Setting the loop select guard to true" << std::endl;
+      solver << domain->templ.begin()->pre_guard.op1();  
+    }
+    
     exprt preinv_expr=domain->to_pre_constraints(pre_inv);
   #ifdef DEBUG_OUTPUT
     debug() << "pre-inv: " << from_expr(ns, "", preinv_expr) << eom;
@@ -289,8 +321,11 @@ void strategy_solver_disjunctivet::get_post(
     debug() << "solve(): ";
   #endif
 
-    if(solver()==decision_proceduret::D_SATISFIABLE)
+    bool improved=false;
+    std::map<unsigned,constant_exprt> lower_values;
+    while(solver()==decision_proceduret::D_SATISFIABLE)
     {
+      improved=true;
   #ifdef DEBUG_OUTPUT
       debug() << "SAT" << eom;
   #endif
@@ -346,8 +381,7 @@ void strategy_solver_disjunctivet::get_post(
       }
   #endif
 
-      std::map<unsigned,constant_exprt> lower_values;
-
+      exprt::operandst blocking_constraint;
       for(std::size_t row=0; row<cond_literals.size(); ++row)
       {
         if(solver.l_get(cond_literals[row]).is_true())
@@ -359,29 +393,30 @@ void strategy_solver_disjunctivet::get_post(
 
           debug() << "raw value; " << from_expr(ns, "", value)
                   << ", simplified value: " << from_expr(ns, "", v) << eom;
-
           lower_values[row]=v;
+          blocking_constraint.push_back(literal_exprt(!cond_literals[row]));
         }
       }
-      solver.pop_context(); // post constraint
-      for (auto &[row, lower] :  lower_values)
-      {
-        solver.new_context(); // symbolic value system
-        auto &templ_row=domain->templ[row];
-        symbol_exprt symb_value=domain->get_row_symb_value(row);
-        exprt c=and_exprt(templ_row.post_guard,
-          binary_relation_exprt(templ_row.expr, ID_ge, symb_value));
-        domain->rename(c);
-        exprt post=and_exprt(templ_row.aux_expr,c);
-        debug() << from_expr(post) << eom;
-        solver << post;
-        constant_exprt upper=domain->get_max_row_value(row);
-        binsearch(domain, symb_value, lower, upper);
-        domain->set_row_value(row,lower,post_inv);
-        solver.pop_context(); // symbolic value system
-      }
+      solver << conjunction(blocking_constraint);
     }
-    else
+    solver.pop_context(); // post constraint
+    for (auto &[row, lower] :  lower_values)
+    {
+      solver.new_context(); // symbolic value system
+      auto &templ_row=domain->templ[row];
+      symbol_exprt symb_value=domain->get_row_symb_value(row);
+      exprt c=and_exprt(templ_row.post_guard,
+        binary_relation_exprt(templ_row.expr, ID_ge, symb_value));
+      domain->rename(c);
+      exprt post=and_exprt(templ_row.aux_expr,c);
+      solver << post;
+      constant_exprt upper=domain->get_max_row_value(row);
+      binsearch(domain, symb_value, lower, upper);
+      domain->set_row_value(row,lower,post_inv);
+      solver.pop_context(); // symbolic value system
+    }
+    
+    if(!improved)
     {
   #ifdef DEBUG_OUTPUT
       debug() << "UNSAT" << eom;
@@ -399,8 +434,6 @@ void strategy_solver_disjunctivet::get_post(
     }
     solver.pop_context(); // pre constraint
 
-    domain->output_value(debug(),post_inv,ns);
-    debug() << eom << eom;
     domain->undo_restriction();
   }
   else

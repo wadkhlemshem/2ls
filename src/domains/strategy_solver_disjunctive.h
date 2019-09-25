@@ -109,7 +109,8 @@ protected:
   void get_post(
     const symbolic_patht &path,
     invariantt &pre_inv,
-    invariantt &post_inv);
+    invariantt &post_inv,
+    bool init=false);
   bool find_loop(local_SSAt::locationt &loophead_loc, loopt *loop);
   void rename(exprt &expr,
     const std::string &src_suffix,

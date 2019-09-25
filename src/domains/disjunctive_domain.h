@@ -134,13 +134,17 @@ public:
 
   disjunctive_domaint(
     unsigned int _domain_number,
-    replace_mapt &_renaming_map,
+    replace_mapt &_post_renaming_map,
+    replace_mapt &_aux_renaming_map,
+    bool _std_invariants,
     const var_specst &var_specs,
     const namespacet &_ns,
     const template_kindt _template_kind,
     const disjunctt _max,
     const lex_metrict _tol):
-    domaint(_domain_number, _renaming_map, _ns),
+    domaint(_domain_number, _post_renaming_map, _ns),
+    aux_renaming_map(_aux_renaming_map),
+    std_invariants(_std_invariants),
     template_kind(_template_kind),
     max(_max),
     templ(),
@@ -216,6 +220,8 @@ protected:
   lex_metrict tol;
   unresolved_sett unresolved_set;
   seen_sett seen_set;
+  replace_mapt aux_renaming_map;
+  bool std_invariants;
 
   friend class strategy_solver_disjunctivet;
 };

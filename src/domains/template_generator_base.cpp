@@ -831,7 +831,7 @@ void template_generator_baset::instantiate_standard_domains(
     max = 2;
     std::cout << "Using a maximum of " << max << " disjuncts" << std::endl;
     domain_ptr=new disjunctive_domaint(
-      domain_number,renaming_map,var_specs,SSA.ns,template_kind,max,tol);
+      domain_number,post_renaming_map,aux_renaming_map,std_invariants,var_specs,SSA.ns,template_kind,max,tol);
 
     domaint *base_domain_ptr=static_cast<disjunctive_domaint *>(domain_ptr)->base_domain();
     static_cast<tpolyhedra_domaint *>(base_domain_ptr)->add_interval_template(var_specs,SSA.ns);
@@ -844,7 +844,7 @@ void template_generator_baset::instantiate_standard_domains(
     unsigned int max=options.get_unsigned_int_option("disjunct-limit");
     std::cout << "Using maximum of " << max << " disjuncts" << std::endl;
     domain_ptr=new disjunctive_domaint(
-      domain_number,renaming_map,var_specs,SSA.ns,template_kind,max,tol);
+      domain_number,post_renaming_map,aux_renaming_map,std_invariants,var_specs,SSA.ns,template_kind,max,tol);
 
     domaint *base_domain_ptr=static_cast<disjunctive_domaint *>(domain_ptr)->base_domain();
     static_cast<tpolyhedra_domaint *>(base_domain_ptr)->add_difference_template(var_specs,SSA.ns);
@@ -858,7 +858,7 @@ void template_generator_baset::instantiate_standard_domains(
     unsigned int max=options.get_unsigned_int_option("disjunct-limit");
     std::cout << "Using maximum of " << max << "disjuncts" << std::endl;
     domain_ptr=new disjunctive_domaint(
-      domain_number,renaming_map,var_specs,SSA.ns,template_kind,max,tol);
+      domain_number,post_renaming_map,aux_renaming_map,std_invariants,var_specs,SSA.ns,template_kind,max,tol);
 
     domaint *base_domain_ptr=static_cast<disjunctive_domaint *>(domain_ptr)->base_domain();
     static_cast<tpolyhedra_domaint *>(base_domain_ptr)->add_sum_template(var_specs,SSA.ns);
