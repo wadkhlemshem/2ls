@@ -50,16 +50,12 @@ bool strategy_solver_disjunctivet::iterate(
       tpolyhedra_valuet pre, post;
       domain->initialize(pre);
       domain->initialize(post);
-      replace_mapt map=disjunctive_domain.renaming_map;
-      if (disjunctive_domain.std_invariants)
-      {
-        domain->renaming_map=disjunctive_domain.aux_renaming_map;
-      }
       get_post(symbolic_patht(),pre,post,true);
 
-      if (disjunctive_domain.std_invariants)
+      if (template_generator.std_invariants)
       {
-        domain->renaming_map=map;
+        disjunctive_domain.renaming_map=template_generator.post_renaming_map;
+        renaming_map=template_generator.post_renaming_map;
       
         for (unsigned row=0; row<domain->templ.size(); row++)
         {
@@ -67,11 +63,9 @@ bool strategy_solver_disjunctivet::iterate(
           templ_row.post_guard=templ_row.post_guard.op0();
           templ_row.aux_expr=true_exprt();
 
-          exprt post1=templ_row.expr;
-          disjunctive_domain.rename(post1);
-          exprt post2=templ_row.expr;
-          domain->rename(post2);
-          debug() << from_expr(templ_row.expr) << " " << from_expr(post1) << " " << from_expr(post2) << eom;
+          exprt post=templ_row.expr;
+          disjunctive_domain.rename(post);
+          debug() << from_expr(templ_row.expr) << " " << from_expr(post) << eom;
         }
       }
       debug() << "Initial value: " << eom;
@@ -282,7 +276,7 @@ void strategy_solver_disjunctivet::get_post(
     }
     
     exprt preinv_expr=domain->to_pre_constraints(pre_inv);
-  #ifdef DEBUG_OUTPUT
+  #if 1
     debug() << "pre-inv: " << from_expr(ns, "", preinv_expr) << eom;
   #endif
 
@@ -299,25 +293,25 @@ void strategy_solver_disjunctivet::get_post(
 
     // exprt postinv_expr=disjunction(cond_exprs);
 
-  #ifdef DEBUG_OUTPUT
+  #if 1
     debug() << "post-inv: ";
   #endif
     for(std::size_t i=0; i<cond_exprs.size(); ++i)
     {
-  #ifdef DEBUG_OUTPUT
+  #if 1
       debug() << (i>0 ? " || " : "") << from_expr(ns, "", cond_exprs[i]);
   #endif
 
       cond_literals[i]=solver.convert(cond_exprs[i]);
       cond_exprs[i]=literal_exprt(cond_literals[i]);
     }
-  #ifdef DEBUG_OUTPUT
+  #if 1
     debug() << eom;
   #endif
 
     solver << disjunction(cond_exprs);
 
-  #ifdef DEBUG_OUTPUT
+  #if 1
     debug() << "solve(): ";
   #endif
 
@@ -326,7 +320,7 @@ void strategy_solver_disjunctivet::get_post(
     while(solver()==decision_proceduret::D_SATISFIABLE)
     {
       improved=true;
-  #ifdef DEBUG_OUTPUT
+  #if 1
       debug() << "SAT" << eom;
   #endif
 
@@ -418,7 +412,7 @@ void strategy_solver_disjunctivet::get_post(
     
     if(!improved)
     {
-  #ifdef DEBUG_OUTPUT
+  #if 1
       debug() << "UNSAT" << eom;
   #endif
 

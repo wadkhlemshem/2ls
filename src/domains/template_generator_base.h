@@ -64,12 +64,12 @@ public:
   local_SSAt::locationt loophead_loc; // for disjunctive domains
   bool loop_present;
   std::vector<exprt> guards;  
+  bool std_invariants; // include value at loop entry
 
 protected:
   const ssa_dbt &ssa_db;
   const ssa_local_unwindert &ssa_local_unwinder;
   domaint *domain_ptr;
-  bool std_invariants; // include value at loop entry
 
   virtual void collect_variables_loop(
     const local_SSAt &SSA,
