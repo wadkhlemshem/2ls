@@ -216,10 +216,10 @@ strategy_solver_disjunctivet::get_unresolved_edge(
       {
         debug() << "Feasible path:" << eom;
         symbolic_patht p;
-        for (const exprt &guard : guards)
+        for (const exprt &cond : conds)
         {
-          exprt b=solver.get(guard);
-          p.path_map[guard] = b.is_true();
+          exprt b=solver.get(cond);
+          p.path_map[cond] = b.is_true();
         }
         debug() << from_expr(ns,"",p.get_expr()) << eom << eom;
 
@@ -1378,7 +1378,7 @@ exprt strategy_solver_disjunctivet::convert(const exprt &expr)
         exprt fg=symbol_exprt("ssa::$guard#free"+std::to_string(current_count), bool_typet());
         current_count++;
         comb=if_exprt(fg, *it, comb);
-        guards.push_back(fg);
+        conds.push_back(fg);
       }
       return comb;
     }
@@ -1434,11 +1434,11 @@ exprt strategy_solver_disjunctivet::push_negation_to_leafs(const exprt &expr)
 
 void strategy_solver_disjunctivet::collect_guards()
 {
-  for (const auto &[guard, cond] : guard_map)
+  for (const auto &[cond, cond_expr] : cond_map)
   {
-    guards.push_back(guard);
-    std::cout << from_expr(cond) << std::endl;
-    exprt expr = convert_equalities(cond);
+    conds.push_back(cond);
+    std::cout << from_expr(cond_expr) << std::endl;
+    exprt expr = convert_equalities(cond_expr);
     if (expr.id() == ID_not)
     {
       expr = push_negation_to_leafs(expr.op0());
@@ -1452,7 +1452,7 @@ void strategy_solver_disjunctivet::collect_guards()
     auto &node=loop->body_nodes.back();
     equal_exprt constraint;
 
-    constraint=equal_exprt(guard,comb_expr);
+    constraint=equal_exprt(cond,comb_expr);
     std::cout << from_expr(constraint) << std::endl;
     solver << constraint;
     node.equalities.push_back(constraint);
@@ -1462,7 +1462,7 @@ void strategy_solver_disjunctivet::collect_guards()
     comb_expr=convert(neg);
     std::cout << from_expr(comb_expr) << std::endl;
 
-    constraint=equal_exprt(not_exprt(guard),comb_expr);
+    constraint=equal_exprt(not_exprt(cond),comb_expr);
     std::cout << from_expr(constraint) << std::endl;
     solver << constraint;
     node.equalities.push_back(constraint);

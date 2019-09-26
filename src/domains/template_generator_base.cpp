@@ -932,7 +932,7 @@ void template_generator_baset::collect_guards(
       std::string id=id2string(to_symbol_expr(eq_it->lhs()).get_identifier());
       if (id.find("cond")!=id.npos && eq_it->rhs()!=true_exprt())
       {
-        guard_map[eq_it->lhs()]=eq_it->rhs();
+        cond_map[eq_it->lhs()]=eq_it->rhs();
       }
     }
     n_it++;

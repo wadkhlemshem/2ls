@@ -52,8 +52,8 @@ public:
     disjunctive_domain(_disjunctive_domain),
     SSA(_SSA),
     template_generator(_template_generator),
-    guard_map(template_generator.guard_map),
-    guards(),
+    cond_map(template_generator.cond_map),
+    conds(),
     current_count(0),
     renaming_map(disjunctive_domain.renaming_map),
     loopheads(),
@@ -88,8 +88,8 @@ protected:
   disjunctive_domaint &disjunctive_domain;
   local_SSAt &SSA;
   template_generator_baset &template_generator;
-  const std::unordered_map<exprt,exprt,irep_hash> &guard_map;
-  guardst guards;
+  const std::unordered_map<exprt,exprt,irep_hash> &cond_map;
+  std::vector<exprt> conds;
   local_SSAt::nodest *loop_copies;
   std::vector<local_SSAt::nodet> loopheads;
   loopt *loop;

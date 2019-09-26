@@ -63,7 +63,7 @@ public:
 
   local_SSAt::locationt loophead_loc; // for disjunctive domains
   bool loop_present;
-  std::unordered_map<exprt, exprt, irep_hash> guard_map;
+  std::unordered_map<exprt, exprt, irep_hash> cond_map;
   bool std_invariants; // include value at loop entry
 
 protected:
