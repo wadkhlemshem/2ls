@@ -1342,14 +1342,22 @@ exprt strategy_solver_disjunctivet::convert_equalities(const exprt &_expr)
       return _expr;
     }
   }
-  exprt::operandst operands;
-  forall_operands(it,_expr)
+  if (_expr.has_operands())
   {
-    operands.push_back(convert_equalities(*it));
+    exprt::operandst operands;
+    forall_operands(it,_expr)
+    {
+      operands.push_back(convert_equalities(*it));
+      std::cout << from_expr(operands.back()) << std::endl;
+    }
+    exprt expr(_expr.id(),_expr.type());
+    expr.operands()=operands;
+    return expr;
   }
-  exprt expr(_expr.id(),_expr.type());
-  expr.operands()=operands;
-  return expr;
+  else
+  {
+    return _expr;
+  }
 }
 
 exprt strategy_solver_disjunctivet::convert(const exprt &expr)
@@ -1441,17 +1449,10 @@ void strategy_solver_disjunctivet::collect_guards()
     comb_expr=convert(expr);
     std::cout << from_expr(comb_expr) << std::endl;
 
-    exprt comb_guard;
-    comb_guard=symbol_exprt("ssa::$guard#comb"+std::to_string(current_count), bool_typet());
-    current_count++;
-
     auto &node=loop->body_nodes.back();
-    std::cout << from_expr(equal_exprt(comb_guard,comb_expr)) << std::endl;
-    solver << equal_exprt(comb_guard, comb_expr);
-    node.equalities.push_back(equal_exprt(comb_guard, comb_expr));
-
     equal_exprt constraint;
-    constraint=equal_exprt(comb_guard,guard);
+
+    constraint=equal_exprt(guard,comb_expr);
     std::cout << from_expr(constraint) << std::endl;
     solver << constraint;
     node.equalities.push_back(constraint);
@@ -1460,14 +1461,8 @@ void strategy_solver_disjunctivet::collect_guards()
     std::cout << from_expr(neg) << std::endl;
     comb_expr=convert(neg);
     std::cout << from_expr(comb_expr) << std::endl;
-    comb_guard=symbol_exprt("ssa::$guard#comb"+std::to_string(current_count), bool_typet());
-    current_count++;
 
-    std::cout << from_expr(equal_exprt(comb_guard,comb_expr)) << std::endl;
-    solver << equal_exprt(comb_guard, comb_expr);
-    node.equalities.push_back(equal_exprt(comb_guard, comb_expr));
-
-    constraint=equal_exprt(comb_guard,not_exprt(guard));
+    constraint=equal_exprt(not_exprt(guard),comb_expr);
     std::cout << from_expr(constraint) << std::endl;
     solver << constraint;
     node.equalities.push_back(constraint);
