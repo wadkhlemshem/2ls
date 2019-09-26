@@ -52,7 +52,8 @@ public:
     disjunctive_domain(_disjunctive_domain),
     SSA(_SSA),
     template_generator(_template_generator),
-    guards(template_generator.guards),
+    guard_map(template_generator.guard_map),
+    guards(),
     current_count(0),
     renaming_map(disjunctive_domain.renaming_map),
     loopheads(),
@@ -64,6 +65,8 @@ public:
     assert(find_loop(template_generator.loophead_loc,loop));
 
     loop_copies=new local_SSAt::nodest();
+    solver.new_context();
+    collect_guards();
   }
 
   ~strategy_solver_disjunctivet()
@@ -76,6 +79,7 @@ public:
     {
       delete loop_copies;
     }
+    solver.pop_context();
   }
 
   virtual bool iterate(invariantt &inv);
@@ -84,6 +88,7 @@ protected:
   disjunctive_domaint &disjunctive_domain;
   local_SSAt &SSA;
   template_generator_baset &template_generator;
+  const std::unordered_map<exprt,exprt,irep_hash> &guard_map;
   guardst guards;
   local_SSAt::nodest *loop_copies;
   std::vector<local_SSAt::nodet> loopheads;
@@ -151,6 +156,11 @@ protected:
   
   void print_all();
   void print_model(const exprt &expr);
+
+  exprt convert_equalities(const exprt &expr);
+  exprt convert(const exprt &expr);
+  exprt push_negation_to_leafs(const exprt &expr);
+  void collect_guards();
 };
 
 #endif //CPROVER_2LS_DOMAINS_STRATEGY_SOLVER_DISJUNCTIVE_DOMAIN_H

@@ -193,10 +193,6 @@ void twols_parse_optionst::get_command_line_options(optionst &options)
   if(cmdline.isset("error-label"))
     options.set_option("error-label", cmdline.get_value("error-label"));
 
-  // max disjunct
-  if (cmdline.isset("disjunct-limit"))
-    options.set_option("disjunct-limit", cmdline.get_value("disjunct-limit"));
-
   if(cmdline.isset("havoc"))
     options.set_option("havoc", true);
   else if(cmdline.isset("equalities"))
@@ -228,29 +224,27 @@ void twols_parse_optionst::get_command_line_options(optionst &options)
       options.set_option("sympath", true);
   }
   // disjunctive domains only work with inlined code for now
-  else if(cmdline.isset("disjunctive-intervals"))
+  else if(cmdline.isset("disjunctive"))
   {
-    options.set_option("disjunctive-intervals", true);
-    options.set_option("disjunctive_domains", true);
+    options.set_option("disjunctive", true);
     options.set_option("inline", true);
-    if (!cmdline.isset("disjunct-limit"))
-      options.set_option("disjunct-limit", 2);
-  }
-  else if(cmdline.isset("disjunctive-zones"))
-  {
-    options.set_option("disjunctive-zones", true);
-    options.set_option("disjunctive_domains", true);
-    options.set_option("inline", true);
-    if (!cmdline.isset("disjunct-limit"))
-      options.set_option("disjunct-limit", 2);
-  }
-  else if(cmdline.isset("disjunctive-octagons"))
-  {
-    options.set_option("disjunctive-octagons", true);
-    options.set_option("disjunctive_domains", true);
-    options.set_option("inline", true);
-    if (!cmdline.isset("disjunct-limit"))
-      options.set_option("disjunct-limit", 2);
+
+    if(cmdline.isset("zones"))
+      options.set_option("zones", true);
+    else if(cmdline.isset("qzones"))
+      options.set_option("qzones", true);
+    else if(cmdline.isset("octagons"))
+      options.set_option("octagons", true);
+    else // if(cmdline.isset("intervals")) // default
+      options.set_option("intervals", true);
+
+    if (!cmdline.isset("max-disjuncts"))
+      options.set_option("max-disjuncts",
+        cmdline.get_value("max-disjuncts"));
+    else
+    {
+      options.set_option("max-disjuncts", 2);
+    }
   }
   else
   {
@@ -563,12 +557,15 @@ int twols_parse_optionst::doit()
     status() << "Using heap domain with interval domain for values" << eom;
   else if(options.get_bool_option("heap-zones"))
     status() << "Using heap domain with zones domain for values" << eom;
-  else if(options.get_bool_option("disjunctive-intervals"))
-    status() << "Using disjunctive intervals domain" << eom;
-  else if(options.get_bool_option("disjunctive-zones"))
-    status() << "Using disjunctive zones domain" << eom;
-  else if(options.get_bool_option("disjunctive-octagons"))
-    status() << "Using disjunctive octagons domain" << eom;
+  else if(options.get_bool_option("disjunctive"))
+  {
+    if(options.get_bool_option("intervals"))
+      status() << "Using disjunctive intervals domain" << eom;
+    if(options.get_bool_option("zones"))
+      status() << "Using disjunctive zones domain" << eom;
+    if(options.get_bool_option("octagons"))
+      status() << "Using disjunctive octagons domain" << eom;
+  }
   else
   {
     if(options.get_bool_option("intervals"))
@@ -1821,6 +1818,8 @@ void twols_parse_optionst::help()
     " --lexicographic-ranking-function n          (default n=3)\n"
     " --monolithic-ranking-function\n"
     " --max-inner-ranking-iterations n           (default n=20)\n"
+    " --disjunctive                use disjunctive domains\n"
+    " --max-disjuncts                            (default n=2)\n"
     "\n"
     "Other options:\n"
     " --version                    show version and exit\n"

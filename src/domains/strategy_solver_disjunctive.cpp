@@ -1104,7 +1104,7 @@ void strategy_solver_disjunctivet::binsearch(
     // row_symb_value >= middle
     exprt c=binary_relation_exprt(symb_value, ID_ge, middle);
 
-#if 1
+#if 0
     debug() << "upper: " << from_expr(ns, "", upper) << eom;
     debug() << "middle: " << from_expr(ns, "", middle) << eom;
     debug() << "lower: " << from_expr(ns, "", lower) << eom;
@@ -1112,7 +1112,7 @@ void strategy_solver_disjunctivet::binsearch(
 
     solver.new_context(); // binary search iteration
 
-#if 1
+#if 0
     debug() << "constraint: " << from_expr(ns, "", c) << eom;
 #endif
 
@@ -1120,11 +1120,11 @@ void strategy_solver_disjunctivet::binsearch(
 
     if(solver()==decision_proceduret::D_SATISFIABLE)
     {
-#if 1
+#if 0
       debug() << "SAT" << eom;
 #endif
 
-#if 1
+#if 0
       debug() << from_expr(ns, "", symb_value)
               << " " << from_expr(
                 ns, "", solver.get(symb_value))
@@ -1136,11 +1136,11 @@ void strategy_solver_disjunctivet::binsearch(
     }
     else
     {
-#if 1
+#if 0
       debug() << "UNSAT" << eom;
 #endif
 
-#if 1
+#if 0
       for(std::size_t i=0; i<solver.formula.size(); ++i)
       {
         if(solver.solver->is_in_conflict(solver.formula[i]))
@@ -1160,7 +1160,6 @@ void strategy_solver_disjunctivet::binsearch(
 
 void strategy_solver_disjunctivet::print_model(const exprt &expr)
 {
-  // debug() << from_expr(expr) << eom;
   if (expr.id()==ID_symbol)
   {
     debug() << from_expr(expr) << ": " << from_expr(simplify_const(solver.get(expr))) << eom;
@@ -1322,4 +1321,155 @@ bool strategy_solver_disjunctivet::improve_row(
   if (improved)
     last_improved.push(improvementt(improvement_rowt(disjunct,row),row_value));
   return improved;
+}
+
+exprt strategy_solver_disjunctivet::convert_equalities(const exprt &_expr)
+{
+  if (_expr.id()==ID_equal)
+  {
+    exprt lhs=to_equal_expr(_expr).lhs();
+    exprt rhs=to_equal_expr(_expr).rhs();
+    typet type=rhs.type();
+    if (type.id()==ID_signedbv ||
+        type.id()==ID_unsignedbv)
+    {
+      return and_exprt(
+        binary_relation_exprt(lhs, ID_le, rhs),
+        binary_relation_exprt(lhs, ID_ge, rhs));
+    }
+    else
+    {
+      return _expr;
+    }
+  }
+  exprt::operandst operands;
+  forall_operands(it,_expr)
+  {
+    operands.push_back(convert_equalities(*it));
+  }
+  exprt expr(_expr.id(),_expr.type());
+  expr.operands()=operands;
+  return expr;
+}
+
+exprt strategy_solver_disjunctivet::convert(const exprt &expr)
+{
+  if (expr.has_operands() && expr.type().id()==ID_bool)
+  {
+    exprt::operandst operands;
+    forall_operands(it,expr)
+    {
+      operands.push_back(convert(*it));
+    }
+    if (expr.id()==ID_or)
+    {
+      auto it=operands.rbegin();
+      exprt comb=*it;
+      for (it++; it!=operands.rend(); it++)
+      {
+        exprt fg=symbol_exprt("ssa::$guard#free"+std::to_string(current_count), bool_typet());
+        current_count++;
+        comb=if_exprt(fg, *it, comb);
+        guards.push_back(fg);
+      }
+      return comb;
+    }
+    else
+    {
+      exprt comb(expr.id(), expr.type());
+      comb.operands() = operands;
+      return comb;
+    }
+  }
+  else
+  {
+    return expr;
+  }
+}
+
+exprt strategy_solver_disjunctivet::push_negation_to_leafs(const exprt &expr)
+{
+  assert(expr.type().id()==ID_bool);
+  if (expr.id()==ID_not)
+  {
+    return expr.op0();
+  }
+  else if (expr.id()==ID_or ||
+          expr.id()==ID_and)
+  {
+    exprt::operandst operands;
+    forall_operands(it,expr)
+    {
+      operands.push_back(push_negation_to_leafs(*it));
+    }
+    if (expr.id()==ID_and)
+    {
+      return disjunction(operands);
+    }
+    else
+    {
+      return conjunction(operands);
+    }
+  }
+  else if (expr.id()==ID_implies)
+  {
+    exprt op0=expr.op0();
+    exprt op1=push_negation_to_leafs(expr.op1());
+    return and_exprt(op0,op1);
+  }
+  else
+  {
+    return not_exprt(expr);
+  }
+  
+}
+
+void strategy_solver_disjunctivet::collect_guards()
+{
+  for (const auto &[guard, cond] : guard_map)
+  {
+    guards.push_back(guard);
+    std::cout << from_expr(cond) << std::endl;
+    exprt expr = convert_equalities(cond);
+    if (expr.id() == ID_not)
+    {
+      expr = push_negation_to_leafs(expr.op0());
+    }
+    std::cout << from_expr(expr) << std::endl;
+
+    exprt comb_expr;
+    comb_expr=convert(expr);
+    std::cout << from_expr(comb_expr) << std::endl;
+
+    exprt comb_guard;
+    comb_guard=symbol_exprt("ssa::$guard#comb"+std::to_string(current_count), bool_typet());
+    current_count++;
+
+    auto &node=loop->body_nodes.back();
+    std::cout << from_expr(equal_exprt(comb_guard,comb_expr)) << std::endl;
+    solver << equal_exprt(comb_guard, comb_expr);
+    node.equalities.push_back(equal_exprt(comb_guard, comb_expr));
+
+    equal_exprt constraint;
+    constraint=equal_exprt(comb_guard,guard);
+    std::cout << from_expr(constraint) << std::endl;
+    solver << constraint;
+    node.equalities.push_back(constraint);
+
+    exprt neg=push_negation_to_leafs(expr);
+    std::cout << from_expr(neg) << std::endl;
+    comb_expr=convert(neg);
+    std::cout << from_expr(comb_expr) << std::endl;
+    comb_guard=symbol_exprt("ssa::$guard#comb"+std::to_string(current_count), bool_typet());
+    current_count++;
+
+    std::cout << from_expr(equal_exprt(comb_guard,comb_expr)) << std::endl;
+    solver << equal_exprt(comb_guard, comb_expr);
+    node.equalities.push_back(equal_exprt(comb_guard, comb_expr));
+
+    constraint=equal_exprt(comb_guard,not_exprt(guard));
+    std::cout << from_expr(constraint) << std::endl;
+    solver << constraint;
+    node.equalities.push_back(constraint);
+  }
 }

@@ -768,6 +768,46 @@ void template_generator_baset::instantiate_standard_domains(
     filter_heap_domain();
     domain_ptr=new heap_domaint(domain_number, renaming_map, var_specs, SSA.ns);
   }
+  else if (options.get_bool_option("disjunctive"))
+  {
+    disjunctive_domaint::lex_metrict tol(0, mp_integer(1));
+    unsigned int max=options.get_unsigned_int_option("max-disjuncts");
+    std::cout << "Using a maximum of " << max << " disjuncts" << std::endl;
+
+    if(options.get_bool_option("intervals"))
+    {
+      filter_template_domain();
+      disjunctive_domaint::template_kindt template_kind=disjunctive_domaint::TPOLYHEDRA;
+      domain_ptr=new disjunctive_domaint(
+        domain_number,renaming_map,var_specs,SSA.ns,template_kind,max,tol);
+
+      domaint *base_domain_ptr=static_cast<disjunctive_domaint *>(domain_ptr)->base_domain();
+      static_cast<tpolyhedra_domaint *>(base_domain_ptr)->add_interval_template(var_specs,SSA.ns);
+    }
+    else if (options.get_bool_option("zones"))
+    {
+      filter_template_domain();
+      disjunctive_domaint::template_kindt template_kind=disjunctive_domaint::TPOLYHEDRA;
+      domain_ptr=new disjunctive_domaint(
+        domain_number,renaming_map,var_specs,SSA.ns,template_kind,max,tol);
+
+      domaint *base_domain_ptr=static_cast<disjunctive_domaint *>(domain_ptr)->base_domain();
+      static_cast<tpolyhedra_domaint *>(base_domain_ptr)->add_difference_template(var_specs,SSA.ns);
+      static_cast<tpolyhedra_domaint *>(base_domain_ptr)->add_interval_template(var_specs,SSA.ns);
+    }
+    else if (options.get_bool_option("octagons"))
+    {
+      filter_template_domain();
+      disjunctive_domaint::template_kindt template_kind=disjunctive_domaint::TPOLYHEDRA;
+      domain_ptr=new disjunctive_domaint(
+        domain_number,renaming_map,var_specs,SSA.ns,template_kind,max,tol);
+
+      domaint *base_domain_ptr=static_cast<disjunctive_domaint *>(domain_ptr)->base_domain();
+      static_cast<tpolyhedra_domaint *>(base_domain_ptr)->add_sum_template(var_specs,SSA.ns);
+      static_cast<tpolyhedra_domaint *>(base_domain_ptr)->add_difference_template(var_specs,SSA.ns);
+      static_cast<tpolyhedra_domaint *>(base_domain_ptr)->add_interval_template(var_specs,SSA.ns);
+    }
+  }
   else if(options.get_bool_option("intervals"))
   {
     domain_ptr=
@@ -821,49 +861,6 @@ void template_generator_baset::instantiate_standard_domains(
     else
       domain_ptr=new heap_tpolyhedra_domaint(
         domain_number, renaming_map, var_specs, SSA.ns, polyhedra_kind);
-  }
-  else if (options.get_bool_option("disjunctive-intervals"))
-  {
-    filter_template_domain();
-    disjunctive_domaint::template_kindt template_kind=disjunctive_domaint::TPOLYHEDRA;
-    disjunctive_domaint::lex_metrict tol(0, mp_integer(2));
-    unsigned int max=options.get_unsigned_int_option("disjunct-limit");
-    max = 2;
-    std::cout << "Using a maximum of " << max << " disjuncts" << std::endl;
-    domain_ptr=new disjunctive_domaint(
-      domain_number,renaming_map,var_specs,SSA.ns,template_kind,max,tol);
-
-    domaint *base_domain_ptr=static_cast<disjunctive_domaint *>(domain_ptr)->base_domain();
-    static_cast<tpolyhedra_domaint *>(base_domain_ptr)->add_interval_template(var_specs,SSA.ns);
-  }
-  else if (options.get_bool_option("disjunctive-zones"))
-  {
-    filter_template_domain();
-    disjunctive_domaint::template_kindt template_kind=disjunctive_domaint::TPOLYHEDRA;
-    disjunctive_domaint::lex_metrict tol(0,mp_integer(1));
-    unsigned int max=options.get_unsigned_int_option("disjunct-limit");
-    std::cout << "Using maximum of " << max << " disjuncts" << std::endl;
-    domain_ptr=new disjunctive_domaint(
-      domain_number,renaming_map,var_specs,SSA.ns,template_kind,max,tol);
-
-    domaint *base_domain_ptr=static_cast<disjunctive_domaint *>(domain_ptr)->base_domain();
-    static_cast<tpolyhedra_domaint *>(base_domain_ptr)->add_difference_template(var_specs,SSA.ns);
-    static_cast<tpolyhedra_domaint *>(base_domain_ptr)->add_interval_template(var_specs,SSA.ns);
-  }
-  else if (options.get_bool_option("disjunctive-octagons"))
-  {
-    filter_template_domain();
-    disjunctive_domaint::template_kindt template_kind=disjunctive_domaint::TPOLYHEDRA;
-    disjunctive_domaint::lex_metrict tol(0,mp_integer(1));
-    unsigned int max=options.get_unsigned_int_option("disjunct-limit");
-    std::cout << "Using maximum of " << max << "disjuncts" << std::endl;
-    domain_ptr=new disjunctive_domaint(
-      domain_number,renaming_map,var_specs,SSA.ns,template_kind,max,tol);
-
-    domaint *base_domain_ptr=static_cast<disjunctive_domaint *>(domain_ptr)->base_domain();
-    static_cast<tpolyhedra_domaint *>(base_domain_ptr)->add_sum_template(var_specs,SSA.ns);
-    static_cast<tpolyhedra_domaint *>(base_domain_ptr)->add_difference_template(var_specs,SSA.ns);
-    static_cast<tpolyhedra_domaint *>(base_domain_ptr)->add_interval_template(var_specs,SSA.ns);
   }
 }
 
@@ -927,40 +924,17 @@ void template_generator_baset::collect_guards(
   local_SSAt::nodest::const_iterator loop_end)
 {
   auto n_it=loop_begin;
-  do
+  n_it++;
+  while (n_it!=loop_end)
   {
-    n_it++;
     for (auto eq_it=n_it->equalities.begin();eq_it!=n_it->equalities.end();eq_it++)
     {
       std::string id=id2string(to_symbol_expr(eq_it->lhs()).get_identifier());
-      if (id.find("phi")!=id.npos)
+      if (id.find("cond")!=id.npos && eq_it->rhs()!=true_exprt())
       {
-        collect_guards(eq_it->rhs());
+        guard_map[eq_it->lhs()]=eq_it->rhs();
       }
     }
-  } while (n_it!=loop_end);
-}
-
-void template_generator_baset::collect_guards(
-  const exprt &expr)
-{
-  if(expr.id()==ID_if)
-  {
-    auto it=guards.begin();
-    for (;it!=guards.end();it++)
-    {
-      if (*it==expr.op0())
-      {
-        break;
-      }
-    }
-    if (it==guards.end())
-    {
-      guards.push_back(expr.op0());
-    }
-  }
-  forall_operands(it,expr)
-  {
-    collect_guards(*it);
+    n_it++;
   }
 }

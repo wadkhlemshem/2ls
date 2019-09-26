@@ -148,9 +148,7 @@ void ssa_analyzert::operator()(
       result=new heap_tpolyhedra_domaint::heap_tpolyhedra_valuet();
     }
   }
-  else if(template_generator.options.get_bool_option("disjunctive-intervals") ||
-          template_generator.options.get_bool_option("disjunctive-zones") ||
-          template_generator.options.get_bool_option("disjunctive-octagons"))
+  else if(template_generator.options.get_bool_option("disjunctive"))
   {
     strategy_solver=new strategy_solver_disjunctivet(*static_cast<disjunctive_domaint *>(domain),solver,SSA,SSA.ns,template_generator);
     result=new disjunctive_domaint::disjunctive_valuet();
