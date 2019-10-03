@@ -238,13 +238,11 @@ void twols_parse_optionst::get_command_line_options(optionst &options)
     else // if(cmdline.isset("intervals")) // default
       options.set_option("intervals", true);
 
-    if (!cmdline.isset("max-disjuncts"))
+    if (cmdline.isset("max-disjuncts"))
       options.set_option("max-disjuncts",
         cmdline.get_value("max-disjuncts"));
     else
-    {
-      options.set_option("max-disjuncts", 2);
-    }
+      options.set_option("max-disjuncts", 2); // default
   }
   else
   {
