@@ -188,9 +188,21 @@ void template_generator_baset::collect_variables_loop(
         const std::string id=id2string(o_it->get_identifier());
         ssa_domaint::phi_nodest::const_iterator p_it=phi_nodes.find(id);
 
+        symbol_exprt pre_var;
         if(p_it==phi_nodes.end()) // object not modified in this loop
+        {
+          if(id2string(o_it->get_identifier()).find("__CPROVER")==std::string::npos &&
+            id2string(o_it->get_identifier()).find("return")==std::string::npos)
+          {  
+            std::cout << from_expr(SSA.read_rhs(*o_it, n_it->loophead->location)) << std::endl;
+            pre_var=SSA.read_rhs(*o_it,n_it->loophead->location);
+            post_renaming_map[pre_var]=pre_var;
+            aux_renaming_map[pre_var]=pre_var;
+            init_renaming_map[pre_var]=pre_var;
+            add_var(pre_var,pre_guard,post_guard,domaint::LOOP,var_specs);
+          }
           continue;
-
+        }
         exprt obj_post_guard=post_guard;
 
         if(id.find("__CPROVER_deallocated")!=std::string::npos)
@@ -203,7 +215,7 @@ void template_generator_baset::collect_variables_loop(
             obj_post_guard=and_exprt(obj_post_guard, disjunction(d));
         }
 
-        symbol_exprt pre_var;
+        // symbol_exprt pre_var;
         get_pre_var(SSA, o_it, n_it, pre_var);
 
         // For fields of dynamic objects, we add a guard that their value is not
@@ -603,7 +615,7 @@ bool template_generator_baset::instantiate_custom_templates(
 {
   // TODO: the code below cannot work for unwound SSA
   //  we deactivate it for now
-  return false;
+  // return false;
 
   // used for renaming map
   var_listt pre_state_vars, post_state_vars;
@@ -647,7 +659,7 @@ bool template_generator_baset::instantiate_custom_templates(
           {
             std::size_t found_param=
               id2string(it->get_identifier()).find(TEMPLATE_PARAM_PREFIX);
-            if(found_param!=std::string::npos)
+            if(found_param!=id2string(it->get_identifier()).npos)
             {
               predabs=false;
               break;
@@ -658,28 +670,56 @@ bool template_generator_baset::instantiate_custom_templates(
           if(!predabs && t_it->id()==ID_le)
           {
             debug() << "Custom template polyhedron found" << eom;
+
             if(!found_poly) // create domain
             {
-              domain_ptr=new tpolyhedra_domaint(
-                domain_number,
-                post_renaming_map,
-                SSA.ns); // TODO: aux_renaming_map
-              found_poly=true;
+              if (options.get_bool_option("disjunctive"))
+              {
+                disjunctive_domaint::lex_metrict tol(0, mp_integer(1));
+                unsigned int max=options.get_unsigned_int_option("max-disjuncts");
+                std::cout << "Using a maximum of " << max << " disjuncts" << std::endl;
+                disjunctive_domaint::template_kindt template_kind=disjunctive_domaint::TPOLYHEDRA;
+                domain_ptr=new disjunctive_domaint(
+                  domain_number,post_renaming_map,var_specs,SSA.ns,template_kind,max,tol);
+
+                domaint *base_domain_ptr=static_cast<disjunctive_domaint *>(domain_ptr)->base_domain();
+                exprt expr=t_it->op0();
+                bool contains_new_var=build_custom_expr(SSA, n_it, expr);
+                if(contains_new_var)
+                  add_post_vars=true;
+                static_cast<tpolyhedra_domaint *>(base_domain_ptr)
+                  ->add_template_row(
+                    expr,
+                    pre_guard,
+                    contains_new_var ?
+                      and_exprt(pre_guard, post_guard) : post_guard,
+                    aux_expr,
+                    contains_new_var ? domaint::OUT : domaint::LOOP);
+              }
+              else
+              {
+                domain_ptr=new tpolyhedra_domaint(
+                  domain_number,
+                  post_renaming_map,
+                  SSA.ns); // TODO: aux_renaming_map
+                found_poly=true;
+              
+
+                exprt expr=t_it->op0();
+                bool contains_new_var=build_custom_expr(SSA, n_it, expr);
+                if(contains_new_var)
+                  add_post_vars=true;
+
+                static_cast<tpolyhedra_domaint *>(domain_ptr)
+                  ->add_template_row(
+                    expr,
+                    pre_guard,
+                    contains_new_var ?
+                      and_exprt(pre_guard, post_guard) : post_guard,
+                    aux_expr,
+                    contains_new_var ? domaint::OUT : domaint::LOOP);
+              }
             }
-
-            exprt expr=t_it->op0();
-            bool contains_new_var=build_custom_expr(SSA, n_it, expr);
-            if(contains_new_var)
-              add_post_vars=true;
-
-            static_cast<tpolyhedra_domaint *>(domain_ptr)
-              ->add_template_row(
-                expr,
-                pre_guard,
-                contains_new_var ?
-                  and_exprt(pre_guard, post_guard) : post_guard,
-                aux_expr,
-                contains_new_var ? domaint::OUT : domaint::LOOP);
           }
           // pred abs domain
           else if(predabs)
@@ -937,4 +977,10 @@ void template_generator_baset::collect_guards(
     }
     n_it++;
   }
+}
+
+void template_generator_baset::collect_guards(
+  const exprt &expr)
+{
+  
 }
