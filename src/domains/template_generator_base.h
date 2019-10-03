@@ -80,8 +80,14 @@ protected:
     local_SSAt::nodest::const_iterator loop_begin,
     local_SSAt::nodest::const_iterator loop_end);
 
-  void collect_guards(
+  void collect_conditions(
     const local_SSAt &SSA,
+    local_SSAt::nodest::const_iterator loop_begin,
+    local_SSAt::nodest::const_iterator loop_end);
+
+  void collect_conditions(
+    const local_SSAt &SSA,
+    const exprt &expr,
     local_SSAt::nodest::const_iterator loop_begin,
     local_SSAt::nodest::const_iterator loop_end);
 

@@ -170,7 +170,7 @@ void template_generator_baset::collect_variables_loop(
       loophead_loc=n_it->loophead->location;
       
       //collect guards for paths
-      collect_guards(SSA,n_it->loophead,n_it);
+      collect_conditions(SSA,n_it->loophead,n_it);
 
       exprt pre_guard, post_guard;
       get_pre_post_guards(SSA, n_it, pre_guard, post_guard);
@@ -958,7 +958,7 @@ std::vector<exprt> template_generator_baset::collect_record_frees(
   return result;
 }
 
-void template_generator_baset::collect_guards(
+void template_generator_baset::collect_conditions(
   const local_SSAt &SSA,
   local_SSAt::nodest::const_iterator loop_begin,
   local_SSAt::nodest::const_iterator loop_end)
@@ -969,18 +969,60 @@ void template_generator_baset::collect_guards(
   {
     for (auto eq_it=n_it->equalities.begin();eq_it!=n_it->equalities.end();eq_it++)
     {
-      std::string id=id2string(to_symbol_expr(eq_it->lhs()).get_identifier());
-      if (id.find("cond")!=id.npos && eq_it->rhs()!=true_exprt())
+      if (eq_it->lhs().id()==ID_symbol)
       {
-        cond_map[eq_it->lhs()]=eq_it->rhs();
+        std::string id=id2string(to_symbol_expr(eq_it->lhs()).get_identifier());
+        if (id.find("phi")!=id.npos) // found a merge node
+        {
+          collect_conditions(SSA,eq_it->rhs(),loop_begin,n_it);
+        }
       }
     }
     n_it++;
   }
 }
 
-void template_generator_baset::collect_guards(
-  const exprt &expr)
+void template_generator_baset::collect_conditions(
+  const local_SSAt &SSA,
+  const exprt &expr,
+  local_SSAt::nodest::const_iterator loop_begin,
+  local_SSAt::nodest::const_iterator loop_end)
 {
-  
+  if (expr.id()==ID_symbol)
+  {
+    std::string id=id2string(expr.get(ID_identifier));
+    if (id.find("cond")!=id.npos || id.find("guard")!=id.npos)
+    {
+      auto n_it=loop_begin;
+      for (n_it++;
+            n_it!=loop_end; n_it++)
+      {
+        for (auto eq_it=n_it->equalities.begin();
+              eq_it!=n_it->equalities.end(); eq_it++)
+        {
+          if (eq_it->lhs().id()==ID_symbol)
+          {
+            if (id==id2string(eq_it->lhs().get(ID_identifier)))
+            {
+              if (id.find("guard")!=id.npos)
+              {
+                collect_conditions(SSA,eq_it->rhs(),loop_begin,n_it);
+              }
+              else if (id.find("cond")!=id.npos && eq_it->rhs()!=true_exprt())
+              {
+                cond_map[eq_it->lhs()]=eq_it->rhs(); // found a condition
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+  else
+  {
+    forall_operands(it,expr)
+    {
+      collect_conditions(SSA,*it,loop_begin,loop_end);
+    }
+  }
 }
