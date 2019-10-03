@@ -174,7 +174,7 @@ void disjunctive_domaint::project_on_vars(
     result = true_exprt();
     return;
   }
-  result = false_exprt();
+  exprt::operandst c;
   exprt disjunct_result;
   if (template_kind==TPOLYHEDRA)
   {
@@ -182,8 +182,9 @@ void disjunctive_domaint::project_on_vars(
     for (auto &v : dv)
     {
       domain->project_on_vars(*v,vars,disjunct_result);
-      result = or_exprt(result,disjunct_result);
+      c.push_back(disjunct_result);
     }
+    result = disjunction(c);
   }
   else
   {
